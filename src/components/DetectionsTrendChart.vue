@@ -5,6 +5,7 @@ import CardContent from '@/components/ui/card/CardContent.vue'
 import CardDescription from '@/components/ui/card/CardDescription.vue'
 import CardHeader from '@/components/ui/card/CardHeader.vue'
 import CardTitle from '@/components/ui/card/CardTitle.vue'
+import ApexChart from '@/components/ApexChart.vue'
 import Skeleton from '@/components/ui/skeleton/Skeleton.vue'
 import type { SeverityChartData } from '@/types'
 import { formatDate } from '@/utils'
@@ -64,7 +65,7 @@ const options = computed(() => ({
       >
         No detection dates in the current dataset.
       </div>
-      <VueApexChart
+      <ApexChart
         v-else
         type="area"
         height="280"

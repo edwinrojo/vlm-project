@@ -5,6 +5,7 @@ import CardContent from '@/components/ui/card/CardContent.vue'
 import CardDescription from '@/components/ui/card/CardDescription.vue'
 import CardHeader from '@/components/ui/card/CardHeader.vue'
 import CardTitle from '@/components/ui/card/CardTitle.vue'
+import ApexChart from '@/components/ApexChart.vue'
 import Skeleton from '@/components/ui/skeleton/Skeleton.vue'
 import type { DamageTypeChartData, SeverityChartData } from '@/types'
 import { severityColor } from '@/utils'
@@ -91,7 +92,7 @@ const damageTypeOptions = computed(() => ({
         >
           No records to chart yet.
         </div>
-        <VueApexChart
+        <ApexChart
           v-else
           type="donut"
           height="320"
@@ -114,7 +115,7 @@ const damageTypeOptions = computed(() => ({
         >
           No records to chart yet.
         </div>
-        <VueApexChart
+        <ApexChart
           v-else
           type="bar"
           height="320"
