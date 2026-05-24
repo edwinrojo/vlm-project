@@ -1,0 +1,5 @@
+export { apiClient, apiMode, useMockData } from './client'
+export { detectRoadDamage, type DetectionPhase } from './damage'
+export { fetchAnalytics } from './analytics'
+export { parseApiError } from './errors'
+export { extractMapCoordinates } from './coordinates'
