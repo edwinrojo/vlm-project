@@ -2,7 +2,7 @@ import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import type { DetectionPhase } from '@/api/damage'
 import { detectRoadDamage } from '@/api/damage'
-import type { AnalyticsRecord, DetectionResult } from '@/types'
+import type { AnalyticsRecord, DetectionCoordinates, DetectionResult } from '@/types'
 import { fetchAnalytics } from '@/api/analytics'
 
 export const useDetectionStore = defineStore('detection', () => {
@@ -20,7 +20,10 @@ export const useDetectionStore = defineStore('detection', () => {
     previewImageUrl.value = URL.createObjectURL(file)
   }
 
-  async function analyzeImage(image: File) {
+  async function analyzeImage(
+    image: File,
+    coordinates?: DetectionCoordinates | null,
+  ) {
     isDetecting.value = true
     uploadProgress.value = 0
     detectionPhase.value = 'uploading'
@@ -28,9 +31,12 @@ export const useDetectionStore = defineStore('detection', () => {
     setPreview(image)
 
     try {
-      result.value = await detectRoadDamage(image, (percentage, phase) => {
-        uploadProgress.value = percentage
-        detectionPhase.value = phase
+      result.value = await detectRoadDamage(image, {
+        coordinates: coordinates ?? null,
+        onProgress: (percentage, phase) => {
+          uploadProgress.value = percentage
+          detectionPhase.value = phase
+        },
       })
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Detection failed'

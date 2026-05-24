@@ -7,9 +7,10 @@ import CardHeader from '@/components/ui/card/CardHeader.vue'
 import CardTitle from '@/components/ui/card/CardTitle.vue'
 import LeafletMapView from '@/components/LeafletMapView.vue'
 import MapExpandDialog from '@/components/MapExpandDialog.vue'
+import { ALL_RISK_LEVELS } from '@/types/filters'
 import type { AnalyticsRecord } from '@/types'
 import { getMappableRecords } from '@/utils/geocode'
-import { severityColor } from '@/utils'
+import { riskLevelColor } from '@/utils'
 
 const props = defineProps<{
   records: AnalyticsRecord[]
@@ -20,11 +21,14 @@ const mapDialogOpen = ref(false)
 
 const mappableRecords = computed(() => getMappableRecords(props.records))
 
-const legendItems = [
-  { label: 'Severe', severity: 'Severe' },
-  { label: 'Moderate', severity: 'Moderate' },
-  { label: 'Minor', severity: 'Minor' },
-]
+const invalidCoordinateCount = computed(
+  () => props.records.filter((r) => r.coordinate_status === 'invalid').length,
+)
+
+const legendItems = ALL_RISK_LEVELS.map((level) => ({
+  label: level,
+  level,
+}))
 </script>
 
 <template>
@@ -34,7 +38,10 @@ const legendItems = [
         <div>
           <CardTitle>Damage Map</CardTitle>
           <CardDescription>
-            {{ mappableRecords.length }} of {{ records.length }} shown
+            {{ mappableRecords.length }} of {{ records.length }} with valid Davao GPS
+            <template v-if="invalidCoordinateCount > 0">
+              · {{ invalidCoordinateCount }} invalid in API
+            </template>
           </CardDescription>
         </div>
         <div
@@ -46,17 +53,17 @@ const legendItems = [
             :loading="loading"
           />
           <div class="flex flex-wrap gap-1.5">
-          <span
-            v-for="item in legendItems"
-            :key="item.label"
-            class="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
-          >
             <span
-              class="h-2.5 w-2.5 rounded-full ring-1 ring-white"
-              :style="{ background: severityColor(item.severity) }"
-            />
-            {{ item.label }}
-          </span>
+              v-for="item in legendItems"
+              :key="item.level"
+              class="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[11px] font-medium text-muted-foreground"
+            >
+              <span
+                class="h-2.5 w-2.5 rounded-full ring-1 ring-white"
+                :style="{ background: riskLevelColor(item.level) }"
+              />
+              {{ item.label }}
+            </span>
           </div>
         </div>
       </div>

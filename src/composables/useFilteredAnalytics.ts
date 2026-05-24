@@ -5,7 +5,7 @@ import {
   filterByConfidence,
   filterByDateRange,
   filterByMapArea,
-  filterBySeverity,
+  filterByRiskLevel,
 } from '@/utils/filters'
 
 export function useFilteredAnalytics(records: Ref<AnalyticsRecord[]>) {
@@ -25,7 +25,7 @@ export function useFilteredAnalytics(records: Ref<AnalyticsRecord[]>) {
 
   const tableRecords = computed(() => {
     let result = dashboardRecords.value
-    result = filterBySeverity(result, filters.selectedSeverities)
+    result = filterByRiskLevel(result, filters.selectedRiskLevels)
     result = filterByConfidence(result, filters.confidenceMin, filters.confidenceMax)
     return result
   })

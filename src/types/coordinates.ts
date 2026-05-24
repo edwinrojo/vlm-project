@@ -5,3 +5,5 @@ export interface MapCoordinates {
 }
 
 export type CoordinateSource = 'api' | 'lookup'
+
+export type CoordinateValidationStatus = 'valid' | 'invalid' | 'missing'

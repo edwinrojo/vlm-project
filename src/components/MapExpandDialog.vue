@@ -26,7 +26,7 @@ watch(open, async (isOpen) => {
   <Teleport to="body">
     <div
       v-if="open"
-      class="fixed inset-0 z-[1100] flex flex-col bg-background/95 backdrop-blur-sm"
+      class="fixed inset-0 z-[1200] flex flex-col bg-background/95 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Expanded damage map"

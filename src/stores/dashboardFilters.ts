@@ -1,16 +1,15 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { MapAreaBounds } from '@/types/filters'
-import { ALL_SEVERITIES } from '@/types/filters'
-import type { Severity } from '@/types'
+import { ALL_RISK_LEVELS } from '@/types/filters'
 
 export const useDashboardFiltersStore = defineStore('dashboardFilters', () => {
   const dateRangeEnabled = ref(false)
   const dateFrom = ref('')
   const dateTo = ref('')
 
-  const selectedSeverities = ref<Severity[]>([])
-  const mapSelectedSeverities = ref<Severity[]>([])
+  const selectedRiskLevels = ref<string[]>([])
+  const mapSelectedRiskLevels = ref<string[]>([])
   const confidenceMin = ref(0)
   const confidenceMax = ref(1)
 
@@ -21,31 +20,31 @@ export const useDashboardFiltersStore = defineStore('dashboardFilters', () => {
   )
 
   const hasActiveMapFilters = computed(
-    () => mapSelectedSeverities.value.length > 0 || mapAreaBounds.value != null,
+    () => mapSelectedRiskLevels.value.length > 0 || mapAreaBounds.value != null,
   )
 
   const hasActiveTableFilters = computed(
     () =>
-      selectedSeverities.value.length > 0 ||
+      selectedRiskLevels.value.length > 0 ||
       confidenceMin.value > 0 ||
       confidenceMax.value < 1,
   )
 
-  function toggleSeverity(severity: Severity) {
-    const index = selectedSeverities.value.indexOf(severity)
+  function toggleRiskLevel(level: string) {
+    const index = selectedRiskLevels.value.indexOf(level)
     if (index >= 0) {
-      selectedSeverities.value = selectedSeverities.value.filter((s) => s !== severity)
+      selectedRiskLevels.value = selectedRiskLevels.value.filter((l) => l !== level)
     } else {
-      selectedSeverities.value = [...selectedSeverities.value, severity]
+      selectedRiskLevels.value = [...selectedRiskLevels.value, level]
     }
   }
 
-  function toggleMapSeverity(severity: Severity) {
-    const index = mapSelectedSeverities.value.indexOf(severity)
+  function toggleMapRiskLevel(level: string) {
+    const index = mapSelectedRiskLevels.value.indexOf(level)
     if (index >= 0) {
-      mapSelectedSeverities.value = mapSelectedSeverities.value.filter((s) => s !== severity)
+      mapSelectedRiskLevels.value = mapSelectedRiskLevels.value.filter((l) => l !== level)
     } else {
-      mapSelectedSeverities.value = [...mapSelectedSeverities.value, severity]
+      mapSelectedRiskLevels.value = [...mapSelectedRiskLevels.value, level]
     }
   }
 
@@ -58,13 +57,13 @@ export const useDashboardFiltersStore = defineStore('dashboardFilters', () => {
   }
 
   function resetTableFilters() {
-    selectedSeverities.value = []
+    selectedRiskLevels.value = []
     confidenceMin.value = 0
     confidenceMax.value = 1
   }
 
   function resetMapFilters() {
-    mapSelectedSeverities.value = []
+    mapSelectedRiskLevels.value = []
     mapAreaBounds.value = null
   }
 
@@ -78,24 +77,24 @@ export const useDashboardFiltersStore = defineStore('dashboardFilters', () => {
   function resetAll() {
     resetDashboardFilters()
     resetTableFilters()
-    mapSelectedSeverities.value = []
+    mapSelectedRiskLevels.value = []
   }
 
   return {
     dateRangeEnabled,
     dateFrom,
     dateTo,
-    selectedSeverities,
-    mapSelectedSeverities,
+    selectedRiskLevels,
+    mapSelectedRiskLevels,
     confidenceMin,
     confidenceMax,
     mapAreaBounds,
     hasActiveDashboardFilters,
     hasActiveTableFilters,
     hasActiveMapFilters,
-    allSeverities: ALL_SEVERITIES,
-    toggleSeverity,
-    toggleMapSeverity,
+    allRiskLevels: ALL_RISK_LEVELS,
+    toggleRiskLevel,
+    toggleMapRiskLevel,
     setMapArea,
     clearMapArea,
     resetTableFilters,

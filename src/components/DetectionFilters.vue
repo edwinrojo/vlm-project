@@ -4,8 +4,7 @@ import { Filter, RotateCcw } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useDashboardFiltersStore } from '@/stores/dashboardFilters'
-import type { Severity } from '@/types'
-import { severityBadgeVariant } from '@/utils'
+import { riskLevelBadgeVariant } from '@/utils'
 
 const props = defineProps<{
   totalInView: number
@@ -28,8 +27,8 @@ const confidenceMaxPercent = computed({
   },
 })
 
-function isSeverityActive(severity: Severity) {
-  return filters.selectedSeverities.includes(severity)
+function isRiskLevelActive(level: string) {
+  return filters.selectedRiskLevels.includes(level)
 }
 </script>
 
@@ -56,20 +55,28 @@ function isSeverityActive(severity: Severity) {
     </div>
 
     <div class="space-y-2">
-      <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">Severity</p>
+      <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Risk level
+      </p>
       <div class="flex flex-wrap gap-2">
         <button
-          v-for="severity in filters.allSeverities"
-          :key="severity"
+          v-for="level in filters.allRiskLevels"
+          :key="level"
           type="button"
           class="rounded-full transition-opacity"
-          :class="isSeverityActive(severity) ? 'ring-2 ring-primary ring-offset-1' : 'opacity-70 hover:opacity-100'"
-          @click="filters.toggleSeverity(severity)"
+          :class="
+            isRiskLevelActive(level)
+              ? 'ring-2 ring-primary ring-offset-1'
+              : 'opacity-70 hover:opacity-100'
+          "
+          @click="filters.toggleRiskLevel(level)"
         >
-          <Badge :variant="severityBadgeVariant(severity)">{{ severity }}</Badge>
+          <Badge :variant="riskLevelBadgeVariant(level)">{{ level }}</Badge>
         </button>
       </div>
-      <p class="text-xs text-muted-foreground">Click to toggle. None selected = all severities.</p>
+      <p class="text-xs text-muted-foreground">
+        Click to toggle. None selected = all risk levels.
+      </p>
     </div>
 
     <div class="space-y-3">

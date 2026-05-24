@@ -3,17 +3,18 @@ import { storeToRefs } from 'pinia'
 import { toast } from 'vue-sonner'
 import DetectionResultCard from '@/components/DetectionResultCard.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
+import type { DetectionCoordinates } from '@/types'
 import { useDetectionStore } from '@/stores'
 
 const detectionStore = useDetectionStore()
 const { result, isDetecting, uploadProgress, detectionPhase, previewImageUrl, error } =
   storeToRefs(detectionStore)
 
-async function handleUpload(file: File) {
+async function handleUpload(file: File, coordinates: DetectionCoordinates) {
   try {
-    await detectionStore.analyzeImage(file)
+    await detectionStore.analyzeImage(file, coordinates)
     const message = result.value?.damage_detected
-      ? `${result.value.damage_type} detected (${result.value.severity})`
+      ? `${result.value.damage_type} · ${result.value.assessment_risk_level ?? result.value.severity}`
       : 'No road damage detected'
     toast.success('Analysis complete', { description: message })
   } catch {

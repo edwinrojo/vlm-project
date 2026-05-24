@@ -1,3 +1,4 @@
+import { recordHasRiskLevel } from '@/constants/roadReport'
 import type { MapAreaBounds } from '@/types/filters'
 import type { AnalyticsRecord } from '@/types'
 import dayjs from 'dayjs'
@@ -11,7 +12,7 @@ export function filterByDateRange(
   if (!enabled) return records
 
   return records.filter((record) => {
-    const date = dayjs(record.date_detected)
+    const date = dayjs(record.created_at)
     if (!date.isValid()) return false
     if (dateFrom && date.isBefore(dayjs(dateFrom), 'day')) return false
     if (dateTo && date.isAfter(dayjs(dateTo), 'day')) return false
@@ -19,21 +20,26 @@ export function filterByDateRange(
   })
 }
 
-export function filterBySeverity(
+/** Match if the record has any of the selected risk levels. */
+export function filterByRiskLevel(
   records: AnalyticsRecord[],
-  severities: string[],
+  riskLevels: string[],
 ): AnalyticsRecord[] {
-  if (severities.length === 0) return records
-  const normalized = severities.map((s) => s.toLowerCase())
-  return records.filter((r) => normalized.includes(r.severity.toLowerCase()))
+  if (riskLevels.length === 0) return records
+  return records.filter((record) =>
+    riskLevels.some((level) => recordHasRiskLevel(record, level)),
+  )
 }
+
+/** @deprecated Use filterByRiskLevel */
+export const filterBySeverity = filterByRiskLevel
 
 export function filterByConfidence(
   records: AnalyticsRecord[],
   min: number,
   max: number,
 ): AnalyticsRecord[] {
-  return records.filter((r) => r.confidence >= min && r.confidence <= max)
+  return records.filter((r) => r.confidence_score >= min && r.confidence_score <= max)
 }
 
 export function filterByMapArea(

@@ -4,6 +4,7 @@ import L from 'leaflet'
 import { Eraser, SquareDashedMousePointer } from 'lucide-vue-next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { primaryRiskLevel } from '@/constants/roadReport'
 import {
   MAP_DEFAULT_CENTER,
   MAP_DEFAULT_ZOOM,
@@ -12,15 +13,17 @@ import {
 } from '@/constants/map'
 import { useMapAreaSelection } from '@/composables/useMapAreaSelection'
 import { useDashboardFiltersStore } from '@/stores/dashboardFilters'
-import type { AnalyticsRecord, Severity } from '@/types'
-import { filterBySeverity } from '@/utils/filters'
+import type { AnalyticsRecord } from '@/types'
+import { filterByRiskLevel } from '@/utils/filters'
 import { getMappableRecords } from '@/utils/geocode'
 import {
   formatConfidence,
-  formatCoordinates,
+  formatCreatedAt,
+  formatRecordCoordinates,
+  formatRecordRecommendation,
   getRecordDisplayLabel,
-  severityBadgeVariant,
-  severityColor,
+  riskLevelBadgeVariant,
+  riskLevelColor,
 } from '@/utils'
 
 const props = withDefaults(
@@ -54,11 +57,19 @@ const areaSelection = useMapAreaSelection(
 
 const displayedRecords = computed(() => {
   let list = getMappableRecords(props.records)
-  if (filtersStore.mapSelectedSeverities.length > 0) {
-    list = filterBySeverity(list, filtersStore.mapSelectedSeverities)
+  if (filtersStore.mapSelectedRiskLevels.length > 0) {
+    list = filterByRiskLevel(list, filtersStore.mapSelectedRiskLevels)
   }
   return list
 })
+
+const invalidCoordinateCount = computed(
+  () => props.records.filter((r) => r.coordinate_status === 'invalid').length,
+)
+
+const hasNoValidMarkers = computed(
+  () => !props.loading && displayedRecords.value.length === 0,
+)
 
 function escapeHtml(text: string) {
   return text
@@ -68,8 +79,8 @@ function escapeHtml(text: string) {
     .replaceAll('"', '&quot;')
 }
 
-function createMarkerIcon(severity: string) {
-  const color = severityColor(severity)
+function createMarkerIcon(riskLevel: string) {
+  const color = riskLevelColor(riskLevel)
   return L.divIcon({
     className: 'damage-marker',
     html: `<div style="background:${color};width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.35)"></div>`,
@@ -89,19 +100,23 @@ function renderMarkers() {
     const latLng: L.LatLngTuple = [record.latitude, record.longitude]
     bounds.push(latLng)
 
-    const recommendation = record.suggested_recommendation
-      ? `<p style="margin:8px 0 0;font-size:12px;line-height:1.4">${escapeHtml(record.suggested_recommendation)}</p>`
-      : ''
+    const recommendation = formatRecordRecommendation(record)
+    const recommendationHtml =
+      recommendation && recommendation !== '—'
+        ? `<p style="margin:8px 0 0;font-size:12px;line-height:1.4">${escapeHtml(recommendation)}</p>`
+        : ''
 
-    L.marker(latLng, { icon: createMarkerIcon(record.severity) })
+    L.marker(latLng, {
+      icon: createMarkerIcon(primaryRiskLevel(record.risk_levels)),
+    })
       .bindPopup(`
-        <div style="min-width:200px;max-width:260px">
+        <div style="min-width:200px;max-width:280px">
           <strong>${escapeHtml(getRecordDisplayLabel(record))}</strong><br/>
-          <span style="font-size:12px;color:#64748b">${formatCoordinates(record.latitude, record.longitude)}</span><br/>
-          ${escapeHtml(record.damage_type)} · ${escapeHtml(record.severity)}<br/>
-          Confidence: ${formatConfidence(record.confidence)}<br/>
-          <span style="color:#64748b;font-size:12px">${escapeHtml(record.date_detected)}</span>
-          ${recommendation}
+          <span style="font-size:12px;color:#64748b">${escapeHtml(formatRecordCoordinates(record))}</span><br/>
+          ${escapeHtml(record.damage_classification)}<br/>
+          <span style="font-size:12px">Risk: ${escapeHtml(record.assessment_risk_level || '—')} · ${formatConfidence(record.confidence_score)}</span><br/>
+          <span style="color:#64748b;font-size:11px">${escapeHtml(formatCreatedAt(record.created_at))}</span>
+          ${recommendationHtml}
         </div>
       `)
       .addTo(markersLayer)
@@ -177,8 +192,8 @@ function clearMapFilters() {
   filtersStore.resetMapFilters()
 }
 
-function isMapSeverityActive(severity: Severity) {
-  return filtersStore.mapSelectedSeverities.includes(severity)
+function isMapRiskLevelActive(level: string) {
+  return filtersStore.mapSelectedRiskLevels.includes(level)
 }
 
 onMounted(() => {
@@ -212,26 +227,26 @@ defineExpose({ invalidateSize: () => map?.invalidateSize() })
     >
       <div class="space-y-2">
         <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Map severity
+          Map risk level
         </span>
         <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
           <button
-            v-for="severity in filtersStore.allSeverities"
-            :key="severity"
+            v-for="level in filtersStore.allRiskLevels"
+            :key="level"
             type="button"
             class="rounded-full transition-opacity"
             :class="
-              isMapSeverityActive(severity)
+              isMapRiskLevelActive(level)
                 ? 'ring-2 ring-primary ring-offset-1'
                 : 'opacity-60 hover:opacity-100'
             "
-            @click="filtersStore.toggleMapSeverity(severity)"
+            @click="filtersStore.toggleMapRiskLevel(level)"
           >
-            <Badge :variant="severityBadgeVariant(severity)">{{ severity }}</Badge>
+            <Badge :variant="riskLevelBadgeVariant(level)">{{ level }}</Badge>
           </button>
         </div>
         <p class="text-[11px] text-muted-foreground sm:text-xs">
-          <span class="hidden sm:inline">None selected = show all</span>
+          <span class="hidden sm:inline">None selected = show all risk levels</span>
           <span class="sm:hidden">Tap badges to filter markers</span>
         </p>
       </div>
@@ -269,7 +284,10 @@ defineExpose({ invalidateSize: () => map?.invalidateSize() })
       </div>
 
       <p class="text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
-        Showing {{ displayedRecords.length }} marker(s) on the map.
+        Showing {{ displayedRecords.length }} marker(s) with valid GPS in the Davao region.
+        <template v-if="invalidCoordinateCount > 0">
+          {{ invalidCoordinateCount }} record(s) have missing or invalid latitude/longitude from the API.
+        </template>
         <template v-if="filtersStore.mapAreaBounds">
           Area selection filters the entire dashboard.
         </template>
@@ -303,6 +321,18 @@ defineExpose({ invalidateSize: () => map?.invalidateSize() })
         class="pointer-events-none absolute inset-0 z-[400] flex items-center justify-center text-sm text-muted-foreground"
       >
         Loading map…
+      </div>
+
+      <div
+        v-if="hasNoValidMarkers && mapReady && !mapError"
+        class="pointer-events-none absolute inset-0 z-[450] flex items-center justify-center p-4"
+      >
+        <p
+          class="max-w-sm rounded-lg border border-border bg-background/95 px-4 py-3 text-center text-sm text-muted-foreground shadow-sm"
+        >
+          No map markers — API coordinates are missing, invalid, or outside the Davao area
+          (e.g. 0,0 or placeholder values). Check latitude and longitude on each report.
+        </p>
       </div>
     </div>
   </div>

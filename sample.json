@@ -1,0 +1,23 @@
+{
+  "id": "1",
+  "damage_profile": {
+    "classification": "Pothole, Alligator Cracking",
+    "dimensions_estimate": "Medium",
+    "technical_terms": ["Crack in the road", "Alligator cracking"]
+  },
+  "assessment": {
+    "risk_level": "High/Critical",
+    "vru_hazard": true,
+    "hazard_analysis": "The image shows a large pothole with alligator cracking around it. This type of damage can lead to vehicle damage and pose safety risks for drivers and pedestrians."
+  },
+  "confidence_score": 0.85,
+  "recommendation": {
+    "action": "Full-depth reclamation",
+    "urgency": "High/Critical",
+    "disclaimer": "AI-generated assessment. Professional inspection required."
+  },
+  "imageBase64": "....",
+  "fileName": "road.png",
+  "latitude": 1,
+  "longitude": 2
+}

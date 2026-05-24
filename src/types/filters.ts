@@ -1,4 +1,4 @@
-import type { Severity } from './damage'
+import { RISK_LEVELS } from '@/constants/roadReport'
 
 /** Serializable map rectangle (WGS84) */
 export interface MapAreaBounds {
@@ -8,4 +8,6 @@ export interface MapAreaBounds {
   east: number
 }
 
-export const ALL_SEVERITIES: Severity[] = ['Minor', 'Moderate', 'Severe']
+export const ALL_RISK_LEVELS = RISK_LEVELS
+
+export type { RiskLevel } from '@/constants/roadReport'

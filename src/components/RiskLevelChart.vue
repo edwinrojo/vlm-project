@@ -8,11 +8,11 @@ import CardHeader from '@/components/ui/card/CardHeader.vue'
 import CardTitle from '@/components/ui/card/CardTitle.vue'
 import ApexChart from '@/components/ApexChart.vue'
 import Skeleton from '@/components/ui/skeleton/Skeleton.vue'
-import type { DamageTypeChartData, SeverityChartData } from '@/types'
-import { severityColor } from '@/utils'
+import type { DamageTypeChartData, RiskLevelChartData } from '@/types'
+import { riskLevelColor } from '@/utils'
 
 const props = defineProps<{
-  severityData: SeverityChartData[]
+  riskLevelData: RiskLevelChartData[]
   damageTypeData: DamageTypeChartData[]
   loading?: boolean
 }>()
@@ -20,17 +20,19 @@ const props = defineProps<{
 const isNarrow = useMediaQuery('(max-width: 639px)')
 const chartHeight = computed(() => (isNarrow.value ? 260 : 320))
 
-const severityTotal = computed(() => props.severityData.reduce((sum, d) => sum + d.value, 0))
+const riskTotal = computed(() => props.riskLevelData.reduce((sum, d) => sum + d.value, 0))
 const damageTypeTotal = computed(() => props.damageTypeData.reduce((sum, d) => sum + d.value, 0))
 
-const severitySeries = computed(() => props.severityData.map((item) => item.value))
-const severityLabels = computed(() => props.severityData.map((item) => item.label))
-const severityColors = computed(() => props.severityData.map((item) => severityColor(item.label)))
+const riskSeries = computed(() => props.riskLevelData.map((item) => item.value))
+const riskLabels = computed(() => props.riskLevelData.map((item) => item.label))
+const riskColors = computed(() =>
+  props.riskLevelData.map((item) => riskLevelColor(item.label)),
+)
 
-const severityOptions = computed(() => ({
+const riskOptions = computed(() => ({
   chart: { type: 'donut' as const, fontFamily: 'inherit' },
-  labels: severityLabels.value,
-  colors: severityColors.value,
+  labels: riskLabels.value,
+  colors: riskColors.value,
   legend: {
     position: 'bottom' as const,
     fontSize: isNarrow.value ? '11px' : '12px',
@@ -51,7 +53,7 @@ const severityOptions = computed(() => ({
       },
     },
   },
-  noData: { text: 'No severity data' },
+  noData: { text: 'No risk level data' },
 }))
 
 const damageTypeSeries = computed(() => [
@@ -93,13 +95,15 @@ const damageTypeOptions = computed(() => ({
   <div class="grid gap-4 lg:grid-cols-2">
     <Card>
       <CardHeader>
-        <CardTitle>Severity Distribution</CardTitle>
-        <CardDescription>Breakdown of detected damage severity levels</CardDescription>
+        <CardTitle>Risk Level Distribution</CardTitle>
+        <CardDescription>
+          Breakdown by assessment risk level from road damage reports
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <Skeleton v-if="loading" class="mx-auto h-72 w-full max-w-sm" />
         <div
-          v-else-if="severityTotal === 0"
+          v-else-if="riskTotal === 0"
           class="flex h-72 items-center justify-center text-sm text-muted-foreground"
         >
           No records to chart yet.
@@ -108,16 +112,16 @@ const damageTypeOptions = computed(() => ({
           v-else
           type="donut"
           :height="chartHeight"
-          :options="severityOptions"
-          :series="severitySeries"
+          :options="riskOptions"
+          :series="riskSeries"
         />
       </CardContent>
     </Card>
 
     <Card>
       <CardHeader>
-        <CardTitle>Damage Types</CardTitle>
-        <CardDescription>Most frequently detected road damage categories</CardDescription>
+        <CardTitle>Damage Classification</CardTitle>
+        <CardDescription>Most frequent damage_classification values</CardDescription>
       </CardHeader>
       <CardContent>
         <Skeleton v-if="loading" class="h-72 w-full" />

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Activity, AlertOctagon, BarChart3, Gauge } from 'lucide-vue-next'
+import { Activity, AlertOctagon, AlertTriangle, BarChart3, Gauge } from 'lucide-vue-next'
 import Card from '@/components/ui/card/Card.vue'
 import CardContent from '@/components/ui/card/CardContent.vue'
 import Skeleton from '@/components/ui/skeleton/Skeleton.vue'
@@ -12,15 +12,16 @@ defineProps<{
 }>()
 
 const statCards = [
-  { key: 'totalDamages', label: 'Total Damages', icon: Activity, color: 'text-primary' },
-  { key: 'severeCount', label: 'Severe Cases', icon: AlertOctagon, color: 'text-red-600' },
-  { key: 'moderateCount', label: 'Moderate Cases', icon: BarChart3, color: 'text-amber-600' },
+  { key: 'totalDamages', label: 'Total Reports', icon: Activity, color: 'text-primary' },
+  { key: 'criticalCount', label: 'Critical', icon: AlertOctagon, color: 'text-red-700' },
+  { key: 'highCount', label: 'High', icon: AlertTriangle, color: 'text-red-600' },
+  { key: 'mediumCount', label: 'Medium', icon: BarChart3, color: 'text-amber-600' },
   { key: 'avgConfidence', label: 'Avg. Confidence', icon: Gauge, color: 'text-emerald-600' },
 ] as const
 </script>
 
 <template>
-  <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
     <Card v-for="card in statCards" :key="card.key">
       <CardContent class="flex items-center gap-3 p-4 sm:gap-4 sm:p-6">
         <template v-if="loading">

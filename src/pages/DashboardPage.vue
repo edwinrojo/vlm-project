@@ -10,7 +10,7 @@ import DashboardStats from "@/components/DashboardStats.vue";
 import DetectionFilters from "@/components/DetectionFilters.vue";
 import DetectionsTrendChart from "@/components/DetectionsTrendChart.vue";
 import RoadMap from "@/components/RoadMap.vue";
-import SeverityChart from "@/components/SeverityChart.vue";
+import RiskLevelChart from "@/components/RiskLevelChart.vue";
 import { Button } from "@/components/ui/button";
 import { useFilteredAnalytics } from "@/composables/useFilteredAnalytics";
 import { useAnalyticsStore } from "@/stores";
@@ -18,7 +18,7 @@ import {
   computeDailyDetectionChartData,
   computeDashboardStats,
   computeDamageTypeChartData,
-  computeSeverityChartData,
+  computeRiskLevelChartData,
 } from "@/utils";
 
 const analyticsStore = useAnalyticsStore();
@@ -32,8 +32,8 @@ const stats = computed(() =>
     ? computeDashboardStats(dashboardRecords.value)
     : null,
 );
-const severityData = computed(() =>
-  computeSeverityChartData(dashboardRecords.value),
+const riskLevelData = computed(() =>
+  computeRiskLevelChartData(dashboardRecords.value),
 );
 const damageTypeData = computed(() =>
   computeDamageTypeChartData(dashboardRecords.value),
@@ -107,8 +107,8 @@ onMounted(() => loadData());
 
     <DashboardStats :stats="stats" :loading="isLoading" />
     <DetectionsTrendChart :daily-data="dailyData" :loading="isLoading" />
-    <SeverityChart
-      :severity-data="severityData"
+    <RiskLevelChart
+      :risk-level-data="riskLevelData"
       :damage-type-data="damageTypeData"
       :loading="isLoading"
     />

@@ -25,7 +25,7 @@ const router = createRouter({
           meta: {
             title: 'Analytics Dashboard',
             description:
-              'Monitor road damage trends, severity distribution, and geographic hotspots across Davao City.',
+              'Monitor road damage trends, risk level distribution, and geographic hotspots across Davao City.',
           },
         },
       ],

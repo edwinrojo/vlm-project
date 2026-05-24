@@ -8,11 +8,11 @@ import CardHeader from '@/components/ui/card/CardHeader.vue'
 import CardTitle from '@/components/ui/card/CardTitle.vue'
 import ApexChart from '@/components/ApexChart.vue'
 import Skeleton from '@/components/ui/skeleton/Skeleton.vue'
-import type { SeverityChartData } from '@/types'
+import type { RiskLevelChartData } from '@/types'
 import { formatDate } from '@/utils'
 
 const props = defineProps<{
-  dailyData: SeverityChartData[]
+  dailyData: RiskLevelChartData[]
   loading?: boolean
 }>()
 
