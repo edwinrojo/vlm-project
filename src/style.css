@@ -73,6 +73,12 @@
   isolation: isolate;
 }
 
+/* Prevent ApexCharts SVG from forcing horizontal page scroll on small screens */
+.apexcharts-canvas,
+.apexcharts-canvas svg {
+  max-width: 100%;
+}
+
 .leaflet-tile,
 .leaflet-marker-icon,
 .leaflet-marker-shadow {

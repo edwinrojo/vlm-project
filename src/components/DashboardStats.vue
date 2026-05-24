@@ -22,7 +22,7 @@ const statCards = [
 <template>
   <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
     <Card v-for="card in statCards" :key="card.key">
-      <CardContent class="flex items-center gap-4 p-6">
+      <CardContent class="flex items-center gap-3 p-4 sm:gap-4 sm:p-6">
         <template v-if="loading">
           <Skeleton class="h-12 w-12 rounded-xl" />
           <div class="flex-1 space-y-2">

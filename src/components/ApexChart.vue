@@ -6,10 +6,12 @@ const VueApexChart = defineAsyncComponent(() => import('vue3-apexcharts'))
 </script>
 
 <template>
-  <Suspense>
-    <VueApexChart v-bind="$attrs" />
-    <template #fallback>
-      <Skeleton class="h-full min-h-[16rem] w-full" />
-    </template>
-  </Suspense>
+  <div class="min-w-0 w-full max-w-full overflow-hidden">
+    <Suspense>
+      <VueApexChart v-bind="$attrs" class="max-w-full" />
+      <template #fallback>
+        <Skeleton class="h-full min-h-[12rem] w-full sm:min-h-[16rem]" />
+      </template>
+    </Suspense>
+  </div>
 </template>

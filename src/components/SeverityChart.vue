@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import Card from '@/components/ui/card/Card.vue'
 import CardContent from '@/components/ui/card/CardContent.vue'
 import CardDescription from '@/components/ui/card/CardDescription.vue'
@@ -16,6 +17,9 @@ const props = defineProps<{
   loading?: boolean
 }>()
 
+const isNarrow = useMediaQuery('(max-width: 639px)')
+const chartHeight = computed(() => (isNarrow.value ? 260 : 320))
+
 const severityTotal = computed(() => props.severityData.reduce((sum, d) => sum + d.value, 0))
 const damageTypeTotal = computed(() => props.damageTypeData.reduce((sum, d) => sum + d.value, 0))
 
@@ -27,7 +31,10 @@ const severityOptions = computed(() => ({
   chart: { type: 'donut' as const, fontFamily: 'inherit' },
   labels: severityLabels.value,
   colors: severityColors.value,
-  legend: { position: 'bottom' as const },
+  legend: {
+    position: 'bottom' as const,
+    fontSize: isNarrow.value ? '11px' : '12px',
+  },
   dataLabels: { enabled: true },
   plotOptions: {
     pie: {
@@ -66,7 +73,12 @@ const damageTypeOptions = computed(() => ({
   dataLabels: { enabled: false },
   xaxis: {
     categories: props.damageTypeData.map((item) => item.label),
-    labels: { style: { fontSize: '12px' } },
+    labels: {
+      rotate: isNarrow.value ? -45 : 0,
+      hideOverlappingLabels: true,
+      trim: true,
+      style: { fontSize: isNarrow.value ? '10px' : '12px' },
+    },
   },
   yaxis: {
     labels: { formatter: (val: number) => Math.round(val).toString() },
@@ -95,7 +107,7 @@ const damageTypeOptions = computed(() => ({
         <ApexChart
           v-else
           type="donut"
-          height="320"
+          :height="chartHeight"
           :options="severityOptions"
           :series="severitySeries"
         />
@@ -118,7 +130,7 @@ const damageTypeOptions = computed(() => ({
         <ApexChart
           v-else
           type="bar"
-          height="320"
+          :height="chartHeight"
           :options="damageTypeOptions"
           :series="damageTypeSeries"
         />

@@ -24,7 +24,7 @@ const summary = computed(() => {
 
 <template>
   <Card>
-    <CardHeader class="pb-3">
+    <CardHeader class="pb-2 sm:pb-3">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle class="text-base">Dashboard Filters</CardTitle>
@@ -34,7 +34,7 @@ const summary = computed(() => {
           v-if="filters.hasActiveDashboardFilters"
           variant="ghost"
           size="sm"
-          class="gap-1.5"
+          class="w-full gap-1.5 sm:w-auto"
           @click="filters.resetDashboardFilters()"
         >
           <RotateCcw class="h-3.5 w-3.5" />

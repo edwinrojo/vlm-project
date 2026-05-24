@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useMediaQuery } from '@/composables/useMediaQuery'
 import Card from '@/components/ui/card/Card.vue'
 import CardContent from '@/components/ui/card/CardContent.vue'
 import CardDescription from '@/components/ui/card/CardDescription.vue'
@@ -14,6 +15,9 @@ const props = defineProps<{
   dailyData: SeverityChartData[]
   loading?: boolean
 }>()
+
+const isNarrow = useMediaQuery('(max-width: 639px)')
+const chartHeight = computed(() => (isNarrow.value ? 240 : 280))
 
 const hasData = computed(() => props.dailyData.some((d) => d.value > 0))
 
@@ -40,7 +44,11 @@ const options = computed(() => ({
   dataLabels: { enabled: false },
   xaxis: {
     categories: props.dailyData.map((d) => formatDate(d.label)),
-    labels: { style: { fontSize: '11px' }, rotate: -45 },
+    labels: {
+      rotate: isNarrow.value ? -65 : -45,
+      hideOverlappingLabels: true,
+      style: { fontSize: isNarrow.value ? '9px' : '11px' },
+    },
   },
   yaxis: {
     labels: { formatter: (val: number) => Math.round(val).toString() },
@@ -68,7 +76,7 @@ const options = computed(() => ({
       <ApexChart
         v-else
         type="area"
-        height="280"
+        :height="chartHeight"
         :options="options"
         :series="series"
       />

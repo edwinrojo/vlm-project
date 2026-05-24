@@ -32,7 +32,7 @@ const props = withDefaults(
   }>(),
   {
     loading: false,
-    heightClass: 'h-[420px]',
+    heightClass: 'h-[min(52vh,420px)] min-h-[240px] sm:h-[420px] sm:min-h-[320px]',
     enableAreaSelect: true,
   },
 )
@@ -207,29 +207,36 @@ defineExpose({ invalidateSize: () => map?.invalidateSize() })
 
 <template>
   <div class="space-y-3">
-    <div class="flex flex-col gap-3 rounded-lg border border-border bg-muted/15 p-3">
-      <div class="flex flex-wrap items-center gap-2">
+    <div
+      class="flex flex-col gap-2 rounded-lg border border-border bg-muted/15 p-2.5 sm:gap-3 sm:p-3"
+    >
+      <div class="space-y-2">
         <span class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
           Map severity
         </span>
-        <button
-          v-for="severity in filtersStore.allSeverities"
-          :key="severity"
-          type="button"
-          class="rounded-full transition-opacity"
-          :class="
-            isMapSeverityActive(severity)
-              ? 'ring-2 ring-primary ring-offset-1'
-              : 'opacity-60 hover:opacity-100'
-          "
-          @click="filtersStore.toggleMapSeverity(severity)"
-        >
-          <Badge :variant="severityBadgeVariant(severity)">{{ severity }}</Badge>
-        </button>
-        <span class="text-xs text-muted-foreground">None selected = show all</span>
+        <div class="flex flex-wrap items-center gap-1.5 sm:gap-2">
+          <button
+            v-for="severity in filtersStore.allSeverities"
+            :key="severity"
+            type="button"
+            class="rounded-full transition-opacity"
+            :class="
+              isMapSeverityActive(severity)
+                ? 'ring-2 ring-primary ring-offset-1'
+                : 'opacity-60 hover:opacity-100'
+            "
+            @click="filtersStore.toggleMapSeverity(severity)"
+          >
+            <Badge :variant="severityBadgeVariant(severity)">{{ severity }}</Badge>
+          </button>
+        </div>
+        <p class="text-[11px] text-muted-foreground sm:text-xs">
+          <span class="hidden sm:inline">None selected = show all</span>
+          <span class="sm:hidden">Tap badges to filter markers</span>
+        </p>
       </div>
 
-      <div v-if="enableAreaSelect" class="flex flex-wrap items-center gap-2">
+      <div v-if="enableAreaSelect" class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Button
           type="button"
           variant="outline"
@@ -254,13 +261,14 @@ defineExpose({ invalidateSize: () => map?.invalidateSize() })
         </Button>
         <span
           v-if="filtersStore.mapAreaBounds"
-          class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+          class="w-fit rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary sm:text-xs"
         >
-          Area filter active · dashboard updated
+          <span class="hidden sm:inline">Area filter active · dashboard updated</span>
+          <span class="sm:hidden">Area filter active</span>
         </span>
       </div>
 
-      <p class="text-xs text-muted-foreground">
+      <p class="text-[11px] leading-relaxed text-muted-foreground sm:text-xs">
         Showing {{ displayedRecords.length }} marker(s) on the map.
         <template v-if="filtersStore.mapAreaBounds">
           Area selection filters the entire dashboard.
@@ -268,7 +276,7 @@ defineExpose({ invalidateSize: () => map?.invalidateSize() })
       </p>
     </div>
 
-    <div class="relative w-full min-h-[280px]" :class="heightClass">
+    <div class="relative w-full min-w-0 min-h-[240px]" :class="heightClass">
       <div
         ref="mapContainer"
         class="leaflet-map-root absolute inset-0 overflow-hidden rounded-lg border border-border bg-[#e8eef4]"

@@ -28,7 +28,7 @@ defineProps<{
 </script>
 
 <template>
-  <Card>
+  <Card class="min-w-0">
     <CardHeader>
       <CardTitle>Recent Detections</CardTitle>
       <CardDescription>
@@ -40,47 +40,94 @@ defineProps<{
         <Skeleton v-for="i in 5" :key="i" class="h-10 w-full" />
       </div>
 
-      <div v-else class="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Coordinates</TableHead>
-              <TableHead>Damage Type</TableHead>
-              <TableHead>Severity</TableHead>
-              <TableHead class="min-w-[200px]">Suggested Recommendation</TableHead>
-              <TableHead class="hidden sm:table-cell">Confidence</TableHead>
-              <TableHead class="hidden md:table-cell">Date</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-if="records.length === 0">
-              <TableCell colspan="6" class="h-24 text-center text-muted-foreground">
-                No detections match the current filters.
-              </TableCell>
-            </TableRow>
-            <TableRow v-for="(record, index) in records" :key="getRecordKey(record, index)">
-              <TableCell class="font-mono text-xs">
-                {{ formatCoordinates(record.latitude, record.longitude) }}
-              </TableCell>
-              <TableCell>{{ record.damage_type }}</TableCell>
-              <TableCell>
-                <Badge :variant="severityBadgeVariant(record.severity)">
-                  {{ record.severity }}
-                </Badge>
-              </TableCell>
-              <TableCell class="max-w-xs text-sm leading-relaxed text-muted-foreground">
-                {{ record.suggested_recommendation || '—' }}
-              </TableCell>
-              <TableCell class="hidden sm:table-cell">
+      <template v-else>
+        <p
+          v-if="records.length === 0"
+          class="rounded-lg border border-dashed border-border py-10 text-center text-sm text-muted-foreground"
+        >
+          No detections match the current filters.
+        </p>
+
+        <!-- Mobile: card list -->
+        <ul v-else class="space-y-3 sm:hidden">
+          <li
+            v-for="(record, index) in records"
+            :key="getRecordKey(record, index)"
+            class="rounded-lg border border-border bg-muted/10 p-3"
+          >
+            <div class="flex flex-wrap items-start justify-between gap-2">
+              <Badge :variant="severityBadgeVariant(record.severity)">
+                {{ record.severity }}
+              </Badge>
+              <span class="font-mono text-[11px] text-muted-foreground">
                 {{ formatConfidence(record.confidence) }}
-              </TableCell>
-              <TableCell class="hidden md:table-cell">
-                {{ formatDate(record.date_detected) }}
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
+              </span>
+            </div>
+            <p class="mt-2 font-medium text-sm text-foreground">
+              {{ record.damage_type }}
+            </p>
+            <p class="mt-1 font-mono text-xs text-muted-foreground break-all">
+              {{ formatCoordinates(record.latitude, record.longitude) }}
+            </p>
+            <p class="mt-2 text-xs text-muted-foreground">
+              {{ formatDate(record.date_detected) }}
+            </p>
+            <p
+              v-if="record.suggested_recommendation"
+              class="mt-2 border-t border-border pt-2 text-sm leading-relaxed text-muted-foreground"
+            >
+              {{ record.suggested_recommendation }}
+            </p>
+          </li>
+        </ul>
+
+        <!-- Tablet+: scrollable table -->
+        <div v-if="records.length > 0" class="hidden sm:block overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead class="whitespace-nowrap">Coordinates</TableHead>
+                <TableHead class="whitespace-nowrap">Damage Type</TableHead>
+                <TableHead class="whitespace-nowrap">Severity</TableHead>
+                <TableHead class="min-w-[12rem]">Suggested Recommendation</TableHead>
+                <TableHead class="hidden whitespace-nowrap md:table-cell">
+                  Confidence
+                </TableHead>
+                <TableHead class="hidden whitespace-nowrap lg:table-cell">
+                  Date
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow
+                v-for="(record, index) in records"
+                :key="getRecordKey(record, index)"
+              >
+                <TableCell class="font-mono text-xs whitespace-nowrap">
+                  {{ formatCoordinates(record.latitude, record.longitude) }}
+                </TableCell>
+                <TableCell class="max-w-[8rem] truncate sm:max-w-none">
+                  {{ record.damage_type }}
+                </TableCell>
+                <TableCell>
+                  <Badge :variant="severityBadgeVariant(record.severity)">
+                    {{ record.severity }}
+                  </Badge>
+                </TableCell>
+                <TableCell class="max-w-xs text-sm leading-relaxed text-muted-foreground">
+                  {{ record.suggested_recommendation || '—' }}
+                </TableCell>
+                <TableCell class="hidden whitespace-nowrap md:table-cell">
+                  {{ formatConfidence(record.confidence) }}
+                </TableCell>
+                <TableCell class="hidden whitespace-nowrap lg:table-cell">
+                  {{ formatDate(record.date_detected) }}
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </template>
     </CardContent>
   </Card>
 </template>

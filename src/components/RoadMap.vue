@@ -37,12 +37,15 @@ const legendItems = [
             {{ mappableRecords.length }} of {{ records.length }} shown
           </CardDescription>
         </div>
-        <div class="flex flex-wrap items-center gap-2">
+        <div
+          class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center"
+        >
           <MapExpandDialog
             v-model:open="mapDialogOpen"
             :records="records"
             :loading="loading"
           />
+          <div class="flex flex-wrap gap-1.5">
           <span
             v-for="item in legendItems"
             :key="item.label"
@@ -54,10 +57,11 @@ const legendItems = [
             />
             {{ item.label }}
           </span>
+          </div>
         </div>
       </div>
     </CardHeader>
-    <CardContent>
+    <CardContent class="min-w-0">
       <LeafletMapView :records="records" :loading="loading" />
     </CardContent>
   </Card>

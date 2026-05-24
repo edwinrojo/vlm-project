@@ -43,7 +43,7 @@ function isActive(item: (typeof navItems)[number]) {
       class="sticky top-0 z-[1000] border-b border-primary/20 bg-primary shadow-md"
     >
       <div
-        class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8"
+        class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6 lg:px-8"
       >
         <RouterLink
           to="/"
@@ -95,18 +95,20 @@ function isActive(item: (typeof navItems)[number]) {
     <div
       class="sticky top-16 z-[990] border-b border-border bg-card shadow-sm"
     >
-      <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <h1 class="text-2xl font-semibold tracking-tight text-foreground">
+      <div class="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
+        <h1
+          class="text-xl font-semibold tracking-tight text-foreground sm:text-2xl"
+        >
           {{ pageTitle }}
         </h1>
-        <p class="mt-1 max-w-3xl text-sm text-muted-foreground">
+        <p class="mt-1 max-w-3xl text-xs text-muted-foreground sm:text-sm">
           {{ pageDescription }}
         </p>
       </div>
     </div>
 
-    <main class="relative z-0 flex-1 isolate">
-      <div class="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+    <main class="relative z-0 flex-1 isolate overflow-x-hidden">
+      <div class="mx-auto max-w-7xl px-3 py-4 sm:px-6 sm:py-6 lg:px-8">
         <RouterView />
       </div>
     </main>

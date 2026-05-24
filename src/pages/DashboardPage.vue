@@ -67,17 +67,20 @@ onMounted(() => loadData());
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div class="min-w-0 space-y-4 sm:space-y-6">
     <div
-      class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+      class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
     >
-      <p v-if="lastUpdatedLabel" class="text-xs text-muted-foreground">
+      <p
+        v-if="lastUpdatedLabel"
+        class="text-xs text-muted-foreground sm:order-1"
+      >
         Last updated: {{ lastUpdatedLabel }}
       </p>
       <Button
         variant="outline"
         size="sm"
-        class="sm:ml-auto"
+        class="w-full sm:order-2 sm:ml-auto sm:w-auto"
         :disabled="isLoading"
         @click="loadData(true)"
       >
@@ -110,17 +113,13 @@ onMounted(() => loadData());
       :loading="isLoading"
     />
 
-    <div class="grid gap-6 xl:grid-cols-5">
-      <div class="xl:col-span-5">
-        <RoadMap :records="dashboardRecords" :loading="isLoading" />
-      </div>
-      <div class="space-y-4 xl:col-span-5">
-        <DetectionFilters
-          :total-in-view="dashboardRecords.length"
-          :filtered-count="tableRecords.length"
-        />
-        <DamageTable :records="tableRecords" :loading="isLoading" />
-      </div>
+    <div class="min-w-0 space-y-4 sm:space-y-6">
+      <RoadMap :records="dashboardRecords" :loading="isLoading" />
+      <DetectionFilters
+        :total-in-view="dashboardRecords.length"
+        :filtered-count="tableRecords.length"
+      />
+      <DamageTable :records="tableRecords" :loading="isLoading" />
     </div>
   </div>
 </template>
