@@ -102,8 +102,7 @@ function onImageError() {
                 {{ OFF_TOPIC_RECORD_LABEL }}
               </p>
               <p class="text-sm text-muted-foreground">
-                This upload was classified as not road damage (confidence score
-                0).
+                This upload was classified as not road damage.
               </p>
               <dl class="grid gap-3 text-sm sm:grid-cols-2">
                 <div>

@@ -10,8 +10,10 @@ import CardTitle from "@/components/ui/card/CardTitle.vue";
 import Skeleton from "@/components/ui/skeleton/Skeleton.vue";
 import type { DetectionResult } from "@/types";
 import {
-  formatConfidence,
   formatCoordinates,
+  formatDetectionConfidence,
+  isOffTopicDetectionResult,
+  OFF_TOPIC_RECORD_LABEL,
   riskLevelBadgeVariant,
   severityBadgeVariant,
 } from "@/utils";
@@ -23,8 +25,14 @@ const props = defineProps<{
   error?: string | null;
 }>();
 
+const isOffTopic = computed(() =>
+  props.result ? isOffTopicDetectionResult(props.result) : false,
+);
+
 const confidencePercent = computed(() =>
-  props.result ? Math.round(props.result.confidence * 100) : 0,
+  props.result && !isOffTopic.value
+    ? Math.round(props.result.confidence * 100)
+    : 0,
 );
 
 const riskBadgeVariant = computed(() => {
@@ -80,12 +88,17 @@ const riskBadgeVariant = computed(() => {
               <div
                 class="flex h-10 w-10 items-center justify-center rounded-full"
                 :class="
-                  result.damage_detected ? 'bg-red-100' : 'bg-emerald-100'
+                  isOffTopic
+                    ? 'bg-muted'
+                    : result.damage_detected
+                      ? 'bg-red-100'
+                      : 'bg-emerald-100'
                 "
               >
                 <ShieldAlert
-                  v-if="result.damage_detected"
-                  class="h-5 w-5 text-red-600"
+                  v-if="isOffTopic || result.damage_detected"
+                  class="h-5 w-5"
+                  :class="isOffTopic ? 'text-muted-foreground' : 'text-red-600'"
                 />
                 <CheckCircle2 v-else class="h-5 w-5 text-emerald-600" />
               </div>
@@ -93,145 +106,174 @@ const riskBadgeVariant = computed(() => {
                 <p class="text-sm font-medium text-muted-foreground">Status</p>
                 <p class="text-lg font-semibold text-foreground">
                   {{
-                    result.damage_detected
-                      ? "Damage Detected"
-                      : "No Damage Found"
+                    isOffTopic
+                      ? OFF_TOPIC_RECORD_LABEL
+                      : result.damage_detected
+                        ? "Damage Detected"
+                        : "No Damage Found"
                   }}
                 </p>
               </div>
             </div>
-            <Badge v-if="result.damage_detected" :variant="riskBadgeVariant">
+            <Badge
+              v-if="!isOffTopic && result.damage_detected"
+              :variant="riskBadgeVariant"
+            >
               {{ result.assessment_risk_level || result.severity }}
             </Badge>
+            <Badge v-else-if="isOffTopic" variant="secondary">Off-topic</Badge>
           </div>
 
-          <div v-if="result.damage_detected" class="space-y-4">
-            <div class="grid gap-4 sm:grid-cols-2">
-              <div
-                class="rounded-lg border border-border bg-card p-4 sm:col-span-2"
-              >
-                <p
-                  class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                >
-                  Classification
-                </p>
-                <p class="mt-1 text-base font-semibold leading-snug">
-                  {{ result.damage_type }}
-                </p>
-                <p
-                  v-if="result.damage_dimensions_estimate"
-                  class="mt-2 text-sm text-muted-foreground"
-                >
-                  {{ result.damage_dimensions_estimate }}
-                </p>
-              </div>
-              <div class="rounded-lg border border-border bg-card p-4">
-                <p
-                  class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                >
-                  Confidence
-                </p>
-                <p class="mt-1 text-base font-semibold">
-                  {{ formatConfidence(result.confidence) }}
-                </p>
-              </div>
-              <div class="rounded-lg border border-border bg-card p-4">
-                <p
-                  class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-                >
-                  VRU hazard
-                </p>
-                <p class="mt-1 text-base font-semibold">
-                  {{ result.assessment_vru_hazard ? "Yes" : "No" }}
-                </p>
-              </div>
-            </div>
-
-            <div
-              v-if="result.latitude != null && result.longitude != null"
-              class="rounded-lg border border-border bg-card p-4"
-            >
-              <p
-                class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
-              >
-                Location
-              </p>
-              <p class="mt-1 font-mono text-sm">
-                {{ formatCoordinates(result.latitude, result.longitude) }}
-              </p>
-            </div>
-
-            <div
-              v-if="result.damage_technical_terms?.length"
-              class="flex flex-wrap gap-1"
-            >
-              <Badge
-                v-for="term in result.damage_technical_terms"
-                :key="term"
-                variant="outline"
-                class="text-xs"
-              >
-                {{ term }}
-              </Badge>
-            </div>
-
-            <div>
-              <div
-                class="mb-1.5 flex justify-between text-xs text-muted-foreground"
-              >
-                <span>Model confidence</span>
-                <span>{{ confidencePercent }}%</span>
-              </div>
-              <div class="h-2 overflow-hidden rounded-full bg-muted">
-                <div
-                  class="h-full rounded-full transition-all duration-500"
-                  :class="
-                    confidencePercent >= 90
-                      ? 'bg-emerald-500'
-                      : confidencePercent >= 70
-                        ? 'bg-amber-500'
-                        : 'bg-red-500'
-                  "
-                  :style="{ width: `${confidencePercent}%` }"
-                />
-              </div>
-            </div>
-
-            <p
-              v-if="result.assessment_hazard_analysis"
-              class="text-sm leading-relaxed text-muted-foreground"
-            >
-              {{ result.assessment_hazard_analysis }}
-            </p>
-          </div>
-
-          <div
-            v-if="result.recommendation"
-            class="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-950"
+          <section
+            v-if="isOffTopic"
+            class="space-y-3 rounded-lg border border-border bg-card p-4"
           >
-            <AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-            <div>
-              <p class="text-sm font-semibold">Recommendation</p>
-              <p
-                v-if="result.recommendation_action"
-                class="mt-1 text-sm font-medium"
+            <p class="text-sm leading-relaxed text-foreground">
+              The model assigned a confidence score of 0 — this image is treated
+              as off-topic or not road damage.
+            </p>
+            <dl class="grid gap-3 text-sm sm:grid-cols-2">
+              <div
+                v-if="result.latitude != null && result.longitude != null"
+                class="sm:col-span-2"
               >
-                {{ result.recommendation_action }}
-              </p>
-              <p v-if="result.recommendation_urgency" class="mt-1 text-sm">
-                Urgency: {{ result.recommendation_urgency }}
-              </p>
-              <p class="mt-1 text-sm leading-relaxed">
-                {{ result.recommendation }}
-              </p>
-              <p
-                v-if="result.recommendation_disclaimer"
-                class="mt-2 text-xs text-amber-800/80"
+                <dt class="text-muted-foreground">Location sent</dt>
+                <dd class="font-mono text-xs">
+                  {{ formatCoordinates(result.latitude, result.longitude) }}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          <template v-else>
+            <div v-if="result.damage_detected" class="space-y-4">
+              <div class="grid gap-4 sm:grid-cols-2">
+                <div
+                  class="rounded-lg border border-border bg-card p-4 sm:col-span-2"
+                >
+                  <p
+                    class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                  >
+                    Classification
+                  </p>
+                  <p class="mt-1 text-base font-semibold leading-snug">
+                    {{ result.damage_type }}
+                  </p>
+                  <p
+                    v-if="result.damage_dimensions_estimate"
+                    class="mt-2 text-sm text-muted-foreground"
+                  >
+                    {{ result.damage_dimensions_estimate }}
+                  </p>
+                </div>
+                <div class="rounded-lg border border-border bg-card p-4">
+                  <p
+                    class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                  >
+                    Confidence
+                  </p>
+                  <p class="mt-1 text-base font-semibold">
+                    {{ formatDetectionConfidence(result) }}
+                  </p>
+                </div>
+                <div class="rounded-lg border border-border bg-card p-4">
+                  <p
+                    class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                  >
+                    VRU hazard
+                  </p>
+                  <p class="mt-1 text-base font-semibold">
+                    {{ result.assessment_vru_hazard ? "Yes" : "No" }}
+                  </p>
+                </div>
+              </div>
+
+              <div
+                v-if="result.latitude != null && result.longitude != null"
+                class="rounded-lg border border-border bg-card p-4"
               >
-                {{ result.recommendation_disclaimer }}
+                <p
+                  class="text-xs font-medium uppercase tracking-wide text-muted-foreground"
+                >
+                  Location
+                </p>
+                <p class="mt-1 font-mono text-sm">
+                  {{ formatCoordinates(result.latitude, result.longitude) }}
+                </p>
+              </div>
+
+              <div
+                v-if="result.damage_technical_terms?.length"
+                class="flex flex-wrap gap-1"
+              >
+                <Badge
+                  v-for="term in result.damage_technical_terms"
+                  :key="term"
+                  variant="outline"
+                  class="text-xs"
+                >
+                  {{ term }}
+                </Badge>
+              </div>
+
+              <div>
+                <div
+                  class="mb-1.5 flex justify-between text-xs text-muted-foreground"
+                >
+                  <span>Model confidence</span>
+                  <span>{{ confidencePercent }}%</span>
+                </div>
+                <div class="h-2 overflow-hidden rounded-full bg-muted">
+                  <div
+                    class="h-full rounded-full transition-all duration-500"
+                    :class="
+                      confidencePercent >= 90
+                        ? 'bg-emerald-500'
+                        : confidencePercent >= 70
+                          ? 'bg-amber-500'
+                          : 'bg-red-500'
+                    "
+                    :style="{ width: `${confidencePercent}%` }"
+                  />
+                </div>
+              </div>
+
+              <p
+                v-if="result.assessment_hazard_analysis"
+                class="text-sm leading-relaxed text-muted-foreground"
+              >
+                {{ result.assessment_hazard_analysis }}
               </p>
             </div>
-          </div>
+
+            <div
+              v-if="result.recommendation"
+              class="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-950"
+            >
+              <AlertTriangle class="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              <div>
+                <p class="text-sm font-semibold">Recommendation</p>
+                <p
+                  v-if="result.recommendation_action"
+                  class="mt-1 text-sm font-medium"
+                >
+                  {{ result.recommendation_action }}
+                </p>
+                <p v-if="result.recommendation_urgency" class="mt-1 text-sm">
+                  Urgency: {{ result.recommendation_urgency }}
+                </p>
+                <p class="mt-1 text-sm leading-relaxed">
+                  {{ result.recommendation }}
+                </p>
+                <p
+                  v-if="result.recommendation_disclaimer"
+                  class="mt-2 text-xs text-amber-800/80"
+                >
+                  {{ result.recommendation_disclaimer }}
+                </p>
+              </div>
+            </div>
+          </template>
         </div>
       </div>
 

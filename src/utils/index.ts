@@ -19,10 +19,13 @@ export {
 } from './format'
 export {
   excludeOffTopicRecords,
+  formatDetectionConfidence,
   formatRecordConfidence,
   formatRecordRecommendation,
   getRecordDisplayLabel,
   getRecordKey,
+  isOffTopicConfidence,
+  isOffTopicDetectionResult,
   isOffTopicRecord,
   OFF_TOPIC_RECORD_LABEL,
 } from './record'

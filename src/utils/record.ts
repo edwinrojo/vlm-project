@@ -1,12 +1,25 @@
-import type { AnalyticsRecord } from '@/types'
+import type { AnalyticsRecord, DetectionResult } from '@/types'
 import { formatRecordCoordinates } from './coordinates'
 import { formatConfidence } from './format'
 
 /** Shown when API confidence_score is 0 (not road damage). */
 export const OFF_TOPIC_RECORD_LABEL = 'Off-topic / not road damage'
 
+export function isOffTopicConfidence(score: number): boolean {
+  return score === 0
+}
+
 export function isOffTopicRecord(record: AnalyticsRecord): boolean {
-  return record.confidence_score === 0
+  return isOffTopicConfidence(record.confidence_score)
+}
+
+export function isOffTopicDetectionResult(result: DetectionResult): boolean {
+  return isOffTopicConfidence(result.confidence)
+}
+
+export function formatDetectionConfidence(result: DetectionResult): string {
+  if (isOffTopicDetectionResult(result)) return OFF_TOPIC_RECORD_LABEL
+  return formatConfidence(result.confidence)
 }
 
 /** Records used for stats, charts, and map markers. */

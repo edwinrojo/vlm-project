@@ -5,6 +5,10 @@ import DetectionResultCard from '@/components/DetectionResultCard.vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 import type { DetectionCoordinates } from '@/types'
 import { useDetectionStore } from '@/stores'
+import {
+  isOffTopicDetectionResult,
+  OFF_TOPIC_RECORD_LABEL,
+} from '@/utils'
 
 const detectionStore = useDetectionStore()
 const { result, isDetecting, uploadProgress, detectionPhase, previewImageUrl, error } =
@@ -13,9 +17,12 @@ const { result, isDetecting, uploadProgress, detectionPhase, previewImageUrl, er
 async function handleUpload(file: File, coordinates: DetectionCoordinates) {
   try {
     await detectionStore.analyzeImage(file, coordinates)
-    const message = result.value?.damage_detected
-      ? `${result.value.damage_type} · ${result.value.assessment_risk_level ?? result.value.severity}`
-      : 'No road damage detected'
+    let message = 'No road damage detected'
+    if (result.value && isOffTopicDetectionResult(result.value)) {
+      message = OFF_TOPIC_RECORD_LABEL
+    } else if (result.value?.damage_detected) {
+      message = `${result.value.damage_type} · ${result.value.assessment_risk_level ?? result.value.severity}`
+    }
     toast.success('Analysis complete', { description: message })
   } catch {
     toast.error('Detection failed', {

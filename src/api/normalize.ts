@@ -14,6 +14,7 @@ import type {
 import { extractMapCoordinates } from './coordinates'
 import { parseApiCoordinates } from '@/utils/coordinates'
 import { resolveRecordCoordinates } from '@/utils/geocode'
+import { OFF_TOPIC_RECORD_LABEL } from '@/utils/record'
 
 function normalizeConfidence(value: number): number {
   if (value > 1) return Math.min(value / 100, 1)
@@ -157,9 +158,40 @@ function readNested(
     : {}
 }
 
+function buildOffTopicDetectionResult(
+  raw: Record<string, unknown>,
+): DetectionResult {
+  const coords = parseApiCoordinates(raw)
+
+  return {
+    damage_detected: false,
+    damage_type: OFF_TOPIC_RECORD_LABEL,
+    damage_dimensions_estimate: '',
+    damage_technical_terms: [],
+    severity: 'Minor',
+    assessment_risk_level: '',
+    assessment_vru_hazard: false,
+    assessment_hazard_analysis: '',
+    confidence: 0,
+    recommendation: OFF_TOPIC_RECORD_LABEL,
+    recommendation_action: '',
+    recommendation_urgency: '',
+    recommendation_disclaimer: '',
+    file_name: String(raw.fileName ?? raw.file_name ?? ''),
+    ...(coords
+      ? { latitude: coords.latitude, longitude: coords.longitude }
+      : {}),
+  }
+}
+
 export function normalizeRoadCheckResponse(
   raw: Record<string, unknown>,
 ): DetectionResult {
+  const confidence = normalizeConfidence(Number(raw.confidence_score ?? 0))
+  if (confidence === 0) {
+    return buildOffTopicDetectionResult(raw)
+  }
+
   const profile = readNested(raw, 'damage_profile')
   const assessment = readNested(raw, 'assessment')
   const recommendation = readNested(raw, 'recommendation')
@@ -192,7 +224,7 @@ export function normalizeRoadCheckResponse(
     assessment_risk_level: riskLevel,
     assessment_vru_hazard: Boolean(assessment.vru_hazard),
     assessment_hazard_analysis: String(assessment.hazard_analysis ?? ''),
-    confidence: normalizeConfidence(Number(raw.confidence_score ?? 0)),
+    confidence,
     recommendation: recommendationText,
     recommendation_action: String(recommendation.action ?? ''),
     recommendation_urgency: formatJoinedList(urgencyLevels) || String(recommendation.urgency ?? ''),
@@ -214,13 +246,21 @@ export function normalizeDetectionResult(
   }
 
   const legacy = raw as DetectionResult
+  const confidence = normalizeConfidence(
+    Number(legacy.confidence ?? rawRecord.confidence_score ?? 0),
+  )
+
+  if (confidence === 0) {
+    return buildOffTopicDetectionResult(rawRecord)
+  }
+
   const coords = extractMapCoordinates(rawRecord)
 
   return {
     damage_detected: Boolean(legacy.damage_detected),
     damage_type: legacy.damage_type ?? 'Unknown',
     severity: titleCaseSeverity(String(legacy.severity ?? 'Minor')),
-    confidence: normalizeConfidence(Number(legacy.confidence ?? 0)),
+    confidence,
     recommendation:
       typeof legacy.recommendation === 'string'
         ? legacy.recommendation
