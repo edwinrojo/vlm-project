@@ -11,6 +11,9 @@ export const ACCEPTED_IMAGE_ACCEPT = [
   '.png',
 ].join(',')
 
+/** Mobile-native camera capture (rear camera when supported) */
+export const CAMERA_CAPTURE_ACCEPT = 'image/jpeg'
+
 const ACCEPTED_EXTENSION_PATTERN = /\.(jpe?g|png)$/i
 
 export function isAcceptedImageFile(file: File): boolean {

@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import {
   AlertCircle,
+  Camera,
   ImageIcon,
   ImagePlus,
   Loader2,
@@ -10,6 +11,7 @@ import {
   Upload,
   X,
 } from "lucide-vue-next";
+import CameraCaptureDialog from "@/components/CameraCaptureDialog.vue";
 import { Button } from "@/components/ui/button";
 import Card from "@/components/ui/card/Card.vue";
 import CardContent from "@/components/ui/card/CardContent.vue";
@@ -19,6 +21,7 @@ import CardTitle from "@/components/ui/card/CardTitle.vue";
 import UploadLocationMap from "@/components/UploadLocationMap.vue";
 import {
   ACCEPTED_IMAGE_ACCEPT,
+  CAMERA_CAPTURE_ACCEPT,
   isAcceptedImageFile,
   MAX_IMAGE_SIZE_BYTES,
 } from "@/constants/upload";
@@ -64,6 +67,10 @@ const locationError = ref<string | null>(null);
 const isFetchingGps = ref(false);
 const isReadingExif = ref(false);
 const exifStatus = ref<ExifStatus>("idle");
+const cameraDialogOpen = ref(false);
+
+const fileInputRef = ref<HTMLInputElement | null>(null);
+const nativeCameraInputRef = ref<HTMLInputElement | null>(null);
 
 const accept = ACCEPTED_IMAGE_ACCEPT;
 
@@ -175,6 +182,22 @@ function onFileChange(event: Event) {
   input.value = "";
 }
 
+function openFilePicker() {
+  fileInputRef.value?.click();
+}
+
+function openCameraDialog() {
+  cameraDialogOpen.value = true;
+}
+
+function openNativeCamera() {
+  nativeCameraInputRef.value?.click();
+}
+
+function onCameraCapture(file: File) {
+  setFile(file);
+}
+
 function clearSelection() {
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
   selectedFile.value = null;
@@ -236,9 +259,9 @@ function submitUpload() {
         @dragleave.prevent="isDragging = false"
         @drop="onDrop"
       >
-        <label
+        <div
           v-if="!previewUrl"
-          class="flex cursor-pointer flex-col items-center justify-center gap-3 px-6 py-12 text-center"
+          class="flex flex-col items-center gap-4 px-6 py-10 text-center"
         >
           <div
             class="flex h-14 w-14 items-center justify-center rounded-full bg-primary/10"
@@ -247,7 +270,7 @@ function submitUpload() {
           </div>
           <div>
             <p class="text-sm font-medium text-foreground">
-              Drop image here or click to browse
+              Add a road damage photo
             </p>
             <p class="mt-1 text-xs text-muted-foreground">
               JPEG, JPG, or PNG · max
@@ -257,14 +280,62 @@ function submitUpload() {
               GPS from photo metadata is used automatically when available.
             </p>
           </div>
+
+          <div class="flex w-full max-w-sm flex-col gap-2 sm:flex-row">
+            <Button
+              type="button"
+              variant="outline"
+              class="flex-1"
+              :disabled="loading"
+              @click="openFilePicker"
+            >
+              <ImagePlus class="h-4 w-4" />
+              Choose file
+            </Button>
+            <Button
+              type="button"
+              class="flex-1"
+              :disabled="loading"
+              @click="openCameraDialog"
+            >
+              <Camera class="h-4 w-4" />
+              Take photo
+            </Button>
+          </div>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            class="text-xs text-muted-foreground"
+            :disabled="loading"
+            @click="openNativeCamera"
+          >
+            Use device camera app
+          </Button>
+
+          <p class="text-xs text-muted-foreground">
+            or drag and drop an image here
+          </p>
+
           <input
+            ref="fileInputRef"
             type="file"
             class="sr-only"
             :accept="accept"
             :disabled="loading"
             @change="onFileChange"
           />
-        </label>
+          <input
+            ref="nativeCameraInputRef"
+            type="file"
+            class="sr-only"
+            :accept="CAMERA_CAPTURE_ACCEPT"
+            capture="environment"
+            :disabled="loading"
+            @change="onFileChange"
+          />
+        </div>
 
         <div v-else class="p-4">
           <div
@@ -432,5 +503,10 @@ function submitUpload() {
         }}
       </p>
     </CardContent>
+
+    <CameraCaptureDialog
+      v-model:open="cameraDialogOpen"
+      @capture="onCameraCapture"
+    />
   </Card>
 </template>
