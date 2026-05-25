@@ -23,6 +23,8 @@ import {
   formatRecordRecommendation,
   getDetectionImageUrl,
   getRecordDisplayLabel,
+  isOffTopicRecord,
+  OFF_TOPIC_RECORD_LABEL,
   riskLevelBadgeVariant,
   riskLevelColor,
 } from "@/utils";
@@ -92,6 +94,14 @@ function createMarkerIcon(riskLevel: string) {
 }
 
 function buildMarkerPopupHtml(record: AnalyticsRecord): string {
+  if (isOffTopicRecord(record)) {
+    return `
+      <div class="map-popup-content" style="min-width:200px;max-width:280px">
+        <strong>${escapeHtml(OFF_TOPIC_RECORD_LABEL)}</strong>
+      </div>
+    `
+  }
+
   const imageUrl = getDetectionImageUrl(record.file_name);
   const imageHtml = imageUrl
     ? `<img

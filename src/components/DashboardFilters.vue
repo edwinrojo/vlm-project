@@ -12,13 +12,21 @@ import { useDashboardFiltersStore } from '@/stores/dashboardFilters'
 const props = defineProps<{
   totalRecords: number
   filteredCount: number
+  offTopicExcludedCount?: number
 }>()
 
 const filters = useDashboardFiltersStore()
 
 const summary = computed(() => {
-  if (!filters.hasActiveDashboardFilters) return 'Showing all records'
-  return `Showing ${props.filteredCount} of ${props.totalRecords} records`
+  const offTopicNote =
+    props.offTopicExcludedCount && props.offTopicExcludedCount > 0
+      ? ` · ${props.offTopicExcludedCount} off-topic excluded from analytics`
+      : ''
+
+  if (!filters.hasActiveDashboardFilters) {
+    return `Showing ${props.filteredCount} road damage report(s)${offTopicNote}`
+  }
+  return `Showing ${props.filteredCount} of ${props.totalRecords} records${offTopicNote}`
 })
 </script>
 

@@ -18,9 +18,11 @@ import TableHeader from "@/components/ui/table/TableHeader.vue";
 import TableRow from "@/components/ui/table/TableRow.vue";
 import type { AnalyticsRecord } from "@/types";
 import {
-  formatConfidence,
   formatCreatedAt,
+  formatRecordConfidence,
   getRecordKey,
+  isOffTopicRecord,
+  OFF_TOPIC_RECORD_LABEL,
   riskLevelBadgeVariant,
 } from "@/utils";
 
@@ -75,6 +77,7 @@ function openRecord(record: AnalyticsRecord) {
 }
 
 function primaryClassification(record: AnalyticsRecord): string {
+  if (isOffTopicRecord(record)) return OFF_TOPIC_RECORD_LABEL;
   if (record.damage_classifications.length > 0) {
     return record.damage_classifications[0]!;
   }
@@ -82,6 +85,9 @@ function primaryClassification(record: AnalyticsRecord): string {
 }
 
 function classificationSummary(record: AnalyticsRecord): string {
+  if (isOffTopicRecord(record)) {
+    return record.file_name || "Confidence score 0";
+  }
   const extra = record.damage_classifications.length - 1;
   if (extra > 0) return `+${extra} more`;
   return record.file_name;
@@ -125,15 +131,24 @@ function classificationSummary(record: AnalyticsRecord): string {
                 </p>
                 <div class="flex flex-wrap items-center gap-1.5">
                   <Badge
-                    v-for="level in record.risk_levels.slice(0, 2)"
-                    :key="level"
-                    :variant="riskLevelBadgeVariant(level)"
+                    v-if="isOffTopicRecord(record)"
+                    variant="secondary"
                     class="text-[10px]"
                   >
-                    {{ level }}
+                    Off-topic
                   </Badge>
+                  <template v-else>
+                    <Badge
+                      v-for="level in record.risk_levels.slice(0, 2)"
+                      :key="level"
+                      :variant="riskLevelBadgeVariant(level)"
+                      class="text-[10px]"
+                    >
+                      {{ level }}
+                    </Badge>
+                  </template>
                   <span class="text-xs text-muted-foreground">
-                    {{ formatConfidence(record.confidence_score) }}
+                    {{ formatRecordConfidence(record) }}
                   </span>
                 </div>
                 <p class="text-xs text-muted-foreground">
@@ -174,7 +189,10 @@ function classificationSummary(record: AnalyticsRecord): string {
                   </p>
                 </TableCell>
                 <TableCell>
-                  <div class="flex flex-wrap gap-1">
+                  <Badge v-if="isOffTopicRecord(record)" variant="secondary">
+                    Off-topic
+                  </Badge>
+                  <div v-else class="flex flex-wrap gap-1">
                     <Badge
                       v-for="level in record.risk_levels.slice(0, 2)"
                       :key="level"
@@ -192,7 +210,7 @@ function classificationSummary(record: AnalyticsRecord): string {
                   </div>
                 </TableCell>
                 <TableCell class="whitespace-nowrap text-sm">
-                  {{ formatConfidence(record.confidence_score) }}
+                  {{ formatRecordConfidence(record) }}
                 </TableCell>
                 <TableCell
                   class="whitespace-nowrap text-xs text-muted-foreground"

@@ -18,9 +18,13 @@ export {
   severityColor,
 } from './format'
 export {
+  excludeOffTopicRecords,
+  formatRecordConfidence,
   formatRecordRecommendation,
   getRecordDisplayLabel,
   getRecordKey,
+  isOffTopicRecord,
+  OFF_TOPIC_RECORD_LABEL,
 } from './record'
 export {
   formatRecordCoordinates,

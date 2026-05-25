@@ -25,7 +25,8 @@ const analyticsStore = useAnalyticsStore();
 const { records, isLoading, error, lastFetchedAt } =
   storeToRefs(analyticsStore);
 
-const { dashboardRecords, tableRecords } = useFilteredAnalytics(records);
+const { dashboardRecords, tableRecords, offTopicInViewCount } =
+  useFilteredAnalytics(records);
 
 const stats = computed(() =>
   dashboardRecords.value.length > 0
@@ -103,6 +104,7 @@ onMounted(() => loadData());
     <DashboardFilters
       :total-records="records.length"
       :filtered-count="dashboardRecords.length"
+      :off-topic-excluded-count="offTopicInViewCount"
     />
 
     <DashboardStats :stats="stats" :loading="isLoading" />
@@ -116,7 +118,7 @@ onMounted(() => loadData());
     <div class="min-w-0 space-y-4 sm:space-y-6">
       <RoadMap :records="dashboardRecords" :loading="isLoading" />
       <DetectionFilters
-        :total-in-view="dashboardRecords.length"
+        :total-in-view="dashboardRecords.length + offTopicInViewCount"
         :filtered-count="tableRecords.length"
       />
       <DamageTable :records="tableRecords" :loading="isLoading" />

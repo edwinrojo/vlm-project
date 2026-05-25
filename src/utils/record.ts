@@ -1,8 +1,27 @@
 import type { AnalyticsRecord } from '@/types'
 import { formatRecordCoordinates } from './coordinates'
+import { formatConfidence } from './format'
+
+/** Shown when API confidence_score is 0 (not road damage). */
+export const OFF_TOPIC_RECORD_LABEL = 'Off-topic / not road damage'
+
+export function isOffTopicRecord(record: AnalyticsRecord): boolean {
+  return record.confidence_score === 0
+}
+
+/** Records used for stats, charts, and map markers. */
+export function excludeOffTopicRecords(records: AnalyticsRecord[]): AnalyticsRecord[] {
+  return records.filter((record) => !isOffTopicRecord(record))
+}
+
+export function formatRecordConfidence(record: AnalyticsRecord): string {
+  if (isOffTopicRecord(record)) return OFF_TOPIC_RECORD_LABEL
+  return formatConfidence(record.confidence_score)
+}
 
 /** Primary line for map popups and labels */
 export function getRecordDisplayLabel(record: AnalyticsRecord): string {
+  if (isOffTopicRecord(record)) return OFF_TOPIC_RECORD_LABEL
   if (record.file_name?.trim()) return record.file_name.trim()
   if (record.damage_classification?.trim()) return record.damage_classification.trim()
   const coords = formatRecordCoordinates(record)
@@ -12,6 +31,8 @@ export function getRecordDisplayLabel(record: AnalyticsRecord): string {
 
 /** Combined recommendation text for table / popups */
 export function formatRecordRecommendation(record: AnalyticsRecord): string {
+  if (isOffTopicRecord(record)) return OFF_TOPIC_RECORD_LABEL
+
   const parts: string[] = []
 
   if (

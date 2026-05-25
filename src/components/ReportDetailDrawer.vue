@@ -11,11 +11,13 @@ import {
 } from "@/components/ui/sheet";
 import type { AnalyticsRecord } from "@/types";
 import {
-  formatConfidence,
   formatCreatedAt,
+  formatRecordConfidence,
   formatRecordCoordinates,
   formatRecordRecommendation,
   getDetectionImageUrl,
+  isOffTopicRecord,
+  OFF_TOPIC_RECORD_LABEL,
   riskLevelBadgeVariant,
 } from "@/utils";
 
@@ -29,6 +31,10 @@ const imageLoadFailed = ref(false);
 
 const imageUrl = computed(() =>
   props.record ? getDetectionImageUrl(props.record.file_name) : null,
+);
+
+const isOffTopic = computed(() =>
+  props.record ? isOffTopicRecord(props.record) : false,
 );
 
 watch(
@@ -87,14 +93,22 @@ function onImageError() {
           </SheetHeader>
 
           <div class="space-y-6 px-6 pb-8 pt-2">
-            <section class="space-y-3">
-              <h3 class="text-base font-bold text-foreground">Summary</h3>
+            <section
+              v-if="isOffTopic"
+              class="space-y-1 rounded-lg border border-border bg-muted/25 p-4"
+            >
+              <h3 class="text-base font-bold text-foreground">RESULT</h3>
+              <p class="text-sm font-medium leading-relaxed text-destructive">
+                {{ OFF_TOPIC_RECORD_LABEL }}
+              </p>
+              <p class="text-sm text-muted-foreground">
+                This upload was classified as not road damage (confidence score
+                0).
+              </p>
               <dl class="grid gap-3 text-sm sm:grid-cols-2">
                 <div>
-                  <dt class="text-muted-foreground">Confidence</dt>
-                  <dd class="font-medium">
-                    {{ formatConfidence(record.confidence_score) }}
-                  </dd>
+                  <dt class="text-muted-foreground">Detected</dt>
+                  <dd>{{ formatCreatedAt(record.created_at) }}</dd>
                 </div>
                 <div>
                   <dt class="text-muted-foreground">Coordinates</dt>
@@ -102,110 +116,130 @@ function onImageError() {
                     {{ formatRecordCoordinates(record) }}
                   </dd>
                 </div>
-                <div class="sm:col-span-2">
-                  <dt class="mb-1 text-muted-foreground">Risk level</dt>
-                  <dd class="flex flex-wrap gap-1">
-                    <Badge
-                      v-for="level in record.risk_levels"
-                      :key="level"
-                      :variant="riskLevelBadgeVariant(level)"
-                    >
-                      {{ level }}
-                    </Badge>
-                    <span
-                      v-if="record.risk_levels.length === 0"
-                      class="text-foreground"
-                    >
-                      {{ record.assessment_risk_level || "—" }}
-                    </span>
-                  </dd>
-                </div>
               </dl>
             </section>
 
-            <section class="space-y-3">
-              <h3 class="text-base font-bold text-foreground">
-                Damage classification
-              </h3>
-              <div class="flex flex-wrap gap-1">
-                <Badge
-                  v-for="type in record.damage_classifications"
-                  :key="type"
-                  variant="outline"
+            <template v-else>
+              <section class="space-y-3">
+                <h3 class="text-base font-bold text-foreground">Summary</h3>
+                <dl class="grid gap-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <dt class="text-muted-foreground">Confidence</dt>
+                    <dd class="font-medium">
+                      {{ formatRecordConfidence(record) }}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt class="text-muted-foreground">Coordinates</dt>
+                    <dd class="font-mono text-xs break-all">
+                      {{ formatRecordCoordinates(record) }}
+                    </dd>
+                  </div>
+                  <div class="sm:col-span-2">
+                    <dt class="mb-1 text-muted-foreground">Risk level</dt>
+                    <dd class="flex flex-wrap gap-1">
+                      <Badge
+                        v-for="level in record.risk_levels"
+                        :key="level"
+                        :variant="riskLevelBadgeVariant(level)"
+                      >
+                        {{ level }}
+                      </Badge>
+                      <span
+                        v-if="record.risk_levels.length === 0"
+                        class="text-foreground"
+                      >
+                        {{ record.assessment_risk_level || "—" }}
+                      </span>
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+
+              <section class="space-y-3">
+                <h3 class="text-base font-bold text-foreground">
+                  Damage classification
+                </h3>
+                <div class="flex flex-wrap gap-1">
+                  <Badge
+                    v-for="type in record.damage_classifications"
+                    :key="type"
+                    variant="outline"
+                  >
+                    {{ type }}
+                  </Badge>
+                </div>
+                <p
+                  v-if="record.damage_classifications.length === 0"
+                  class="text-sm"
                 >
-                  {{ type }}
-                </Badge>
-              </div>
-              <p
-                v-if="record.damage_classifications.length === 0"
-                class="text-sm"
-              >
-                {{ record.damage_classification }}
-              </p>
-              <dl class="grid gap-2 text-sm">
-                <div v-if="record.damage_dimensions_estimate">
-                  <dt class="text-muted-foreground">Dimensions estimate</dt>
-                  <dd>{{ record.damage_dimensions_estimate }}</dd>
-                </div>
-                <div v-if="record.damage_technical_terms.length > 0">
-                  <dt class="text-muted-foreground">Technical terms</dt>
-                  <dd>{{ record.damage_technical_terms.join(", ") }}</dd>
-                </div>
-              </dl>
-            </section>
+                  {{ record.damage_classification }}
+                </p>
+                <dl class="grid gap-2 text-sm">
+                  <div v-if="record.damage_dimensions_estimate">
+                    <dt class="text-muted-foreground">Dimensions estimate</dt>
+                    <dd>{{ record.damage_dimensions_estimate }}</dd>
+                  </div>
+                  <div v-if="record.damage_technical_terms.length > 0">
+                    <dt class="text-muted-foreground">Technical terms</dt>
+                    <dd>{{ record.damage_technical_terms.join(", ") }}</dd>
+                  </div>
+                </dl>
+              </section>
 
-            <section class="space-y-3">
-              <h3 class="text-base font-bold text-foreground">Assessment</h3>
-              <dl class="grid gap-3 text-sm">
-                <div>
-                  <dt class="text-muted-foreground">VRU hazard</dt>
-                  <dd class="font-medium">
-                    {{ record.assessment_vru_hazard ? "Yes" : "No" }}
-                  </dd>
-                </div>
-                <div v-if="record.assessment_hazard_analysis">
-                  <dt class="text-muted-foreground">Hazard analysis</dt>
-                  <dd class="leading-relaxed text-foreground">
-                    {{ record.assessment_hazard_analysis }}
-                  </dd>
-                </div>
-              </dl>
-            </section>
+              <section class="space-y-3">
+                <h3 class="text-base font-bold text-foreground">Assessment</h3>
+                <dl class="grid gap-3 text-sm">
+                  <div>
+                    <dt class="text-muted-foreground">VRU hazard</dt>
+                    <dd class="font-medium">
+                      {{ record.assessment_vru_hazard ? "Yes" : "No" }}
+                    </dd>
+                  </div>
+                  <div v-if="record.assessment_hazard_analysis">
+                    <dt class="text-muted-foreground">Hazard analysis</dt>
+                    <dd class="leading-relaxed text-foreground">
+                      {{ record.assessment_hazard_analysis }}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
 
-            <section class="space-y-3">
-              <h3 class="text-base font-bold text-foreground">
-                Recommendation
-              </h3>
-              <dl class="grid gap-3 text-sm">
-                <div v-if="record.recommendation_action">
-                  <dt class="text-muted-foreground">Action</dt>
-                  <dd>{{ record.recommendation_action }}</dd>
-                </div>
-                <div>
-                  <dt class="mb-1 text-muted-foreground">Urgency</dt>
-                  <dd class="flex flex-wrap gap-1">
-                    <Badge
-                      v-for="level in record.recommendation_urgency_levels"
-                      :key="level"
-                      :variant="riskLevelBadgeVariant(level)"
-                    >
-                      {{ level }}
-                    </Badge>
-                    <span
-                      v-if="record.recommendation_urgency_levels.length === 0"
-                    >
-                      {{ record.recommendation_urgency || "—" }}
-                    </span>
-                  </dd>
-                </div>
-                <div v-if="record.recommendation_disclaimer">
-                  <dt class="text-muted-foreground">Disclaimer</dt>
-                  <dd class="text-muted-foreground">
-                    {{ record.recommendation_disclaimer }}
-                  </dd>
-                </div>
-              </dl>
-            </section>
+              <section class="space-y-3">
+                <h3 class="text-base font-bold text-foreground">
+                  Recommendation
+                </h3>
+                <dl class="grid gap-3 text-sm">
+                  <div v-if="record.recommendation_action">
+                    <dt class="text-muted-foreground">Action</dt>
+                    <dd>{{ record.recommendation_action }}</dd>
+                  </div>
+                  <div>
+                    <dt class="mb-1 text-muted-foreground">Urgency</dt>
+                    <dd class="flex flex-wrap gap-1">
+                      <Badge
+                        v-for="level in record.recommendation_urgency_levels"
+                        :key="level"
+                        :variant="riskLevelBadgeVariant(level)"
+                      >
+                        {{ level }}
+                      </Badge>
+                      <span
+                        v-if="record.recommendation_urgency_levels.length === 0"
+                      >
+                        {{ record.recommendation_urgency || "—" }}
+                      </span>
+                    </dd>
+                  </div>
+                  <div v-if="record.recommendation_disclaimer">
+                    <dt class="text-muted-foreground">Disclaimer</dt>
+                    <dd class="text-muted-foreground">
+                      {{ record.recommendation_disclaimer }}
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+            </template>
           </div>
         </div>
       </template>
