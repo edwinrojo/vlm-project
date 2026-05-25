@@ -2,16 +2,19 @@
 import { nextTick, onUnmounted, ref, watch } from 'vue'
 import { Camera, Loader2, SwitchCamera, X } from 'lucide-vue-next'
 import { Button } from '@/components/ui/button'
+import type { DetectionCoordinates } from '@/types'
+import { getUploadCoordinates } from '@/utils'
 
 const open = defineModel<boolean>('open', { default: false })
 
 const emit = defineEmits<{
-  capture: [file: File]
+  capture: [file: File, coordinates: DetectionCoordinates | null]
 }>()
 
 const videoRef = ref<HTMLVideoElement | null>(null)
 const cameraError = ref<string | null>(null)
 const isStarting = ref(false)
+const isCapturing = ref(false)
 const useFrontCamera = ref(false)
 
 let stream: MediaStream | null = null
@@ -62,35 +65,51 @@ async function toggleCamera() {
   await startCamera()
 }
 
-function capturePhoto() {
+async function capturePhoto() {
   const video = videoRef.value
-  if (!video || video.videoWidth === 0) return
+  if (!video || video.videoWidth === 0 || isCapturing.value) return
+
+  isCapturing.value = true
+  cameraError.value = null
+
+  const gpsPromise = getUploadCoordinates()
 
   const canvas = document.createElement('canvas')
   canvas.width = video.videoWidth
   canvas.height = video.videoHeight
 
   const ctx = canvas.getContext('2d')
-  if (!ctx) return
+  if (!ctx) {
+    isCapturing.value = false
+    return
+  }
 
   ctx.drawImage(video, 0, 0)
 
-  canvas.toBlob(
-    (blob) => {
-      if (!blob) {
-        cameraError.value = 'Failed to capture photo. Please try again.'
-        return
-      }
+  await new Promise<void>((resolve) => {
+    canvas.toBlob(
+      async (blob) => {
+        try {
+          if (!blob) {
+            cameraError.value = 'Failed to capture photo. Please try again.'
+            return
+          }
 
-      const file = new File([blob], `road-capture-${Date.now()}.jpg`, {
-        type: 'image/jpeg',
-      })
-      emit('capture', file)
-      open.value = false
-    },
-    'image/jpeg',
-    0.92,
-  )
+          const file = new File([blob], `road-capture-${Date.now()}.jpg`, {
+            type: 'image/jpeg',
+          })
+          const coordinates = await gpsPromise
+          emit('capture', file, coordinates)
+          open.value = false
+        } finally {
+          isCapturing.value = false
+          resolve()
+        }
+      },
+      'image/jpeg',
+      0.92,
+    )
+  })
 }
 
 watch(open, (isOpen) => {
@@ -125,7 +144,7 @@ onUnmounted(() => {
             Take photo
           </h2>
           <p class="mt-0.5 text-xs text-muted-foreground sm:text-sm">
-            Point the camera at the road damage, then capture.
+            Point at the road damage. Device GPS is saved when you capture.
           </p>
         </div>
         <Button variant="outline" size="sm" @click="open = false">
@@ -177,11 +196,12 @@ onUnmounted(() => {
             type="button"
             size="lg"
             class="sm:flex-1"
-            :disabled="isStarting || Boolean(cameraError)"
+            :disabled="isStarting || isCapturing || Boolean(cameraError)"
             @click="capturePhoto"
           >
-            <Camera class="h-4 w-4" />
-            Capture photo
+            <Loader2 v-if="isCapturing" class="h-4 w-4 animate-spin" />
+            <Camera v-else class="h-4 w-4" />
+            {{ isCapturing ? 'Capturing…' : 'Capture photo' }}
           </Button>
         </div>
       </div>

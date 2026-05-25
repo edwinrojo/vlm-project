@@ -68,6 +68,7 @@ const isFetchingGps = ref(false);
 const isReadingExif = ref(false);
 const exifStatus = ref<ExifStatus>("idle");
 const cameraDialogOpen = ref(false);
+const locationFromCapture = ref(false);
 
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const nativeCameraInputRef = ref<HTMLInputElement | null>(null);
@@ -88,12 +89,19 @@ const canSubmit = computed(
   () =>
     Boolean(selectedFile.value && coordinates.value) &&
     !props.loading &&
-    !isReadingExif.value,
+    !isReadingExif.value &&
+    !isFetchingGps.value,
 );
 
 const locationSourceHint = computed(() => {
   if (exifStatus.value === "reading") {
     return "Reading GPS from image metadata…";
+  }
+  if (isFetchingGps.value) {
+    return "Getting device location…";
+  }
+  if (locationFromCapture.value && coordinates.value) {
+    return "Location from device GPS when the photo was captured.";
   }
   if (locationMode.value === "exif" && coordinates.value) {
     return "Location from photo EXIF metadata.";
@@ -111,6 +119,7 @@ function resetLocation() {
   isFetchingGps.value = false;
   isReadingExif.value = false;
   exifStatus.value = "idle";
+  locationFromCapture.value = false;
 }
 
 function validateFile(file: File): string | null {
@@ -144,6 +153,7 @@ async function applyExifCoordinates(file: File) {
 
 async function usePhotoLocation() {
   if (!selectedFile.value) return;
+  locationFromCapture.value = false;
   await applyExifCoordinates(selectedFile.value);
   if (exifStatus.value === "not_found") {
     locationError.value =
@@ -194,8 +204,32 @@ function openNativeCamera() {
   nativeCameraInputRef.value?.click();
 }
 
-function onCameraCapture(file: File) {
-  setFile(file);
+async function onCameraCapture(
+  file: File,
+  captureGps: DetectionCoordinates | null,
+) {
+  const err = validateFile(file);
+  if (err) {
+    validationError.value = err;
+    return;
+  }
+
+  validationError.value = null;
+  if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
+  resetLocation();
+  selectedFile.value = file;
+  previewUrl.value = URL.createObjectURL(file);
+  exifStatus.value = "not_found";
+
+  if (captureGps) {
+    coordinates.value = captureGps;
+    locationMode.value = "gps";
+    locationFromCapture.value = true;
+    return;
+  }
+
+  locationError.value =
+    "Photo saved, but device location was unavailable. Allow location access or pick on the map.";
 }
 
 function clearSelection() {
@@ -209,6 +243,7 @@ function clearSelection() {
 
 async function useCurrentLocation() {
   locationMode.value = "gps";
+  locationFromCapture.value = false;
   exifStatus.value = "idle";
   locationError.value = null;
   isFetchingGps.value = true;
@@ -229,6 +264,7 @@ async function useCurrentLocation() {
 
 function useMapPicker() {
   locationMode.value = "map";
+  locationFromCapture.value = false;
   locationError.value = null;
   exifStatus.value = "idle";
 }
@@ -377,7 +413,8 @@ function submitUpload() {
           v-if="locationSourceHint"
           class="text-xs"
           :class="
-            locationMode === 'exif' && coordinates
+            coordinates &&
+            (locationMode === 'exif' || locationFromCapture)
               ? 'text-emerald-700 dark:text-emerald-400'
               : 'text-muted-foreground'
           "
