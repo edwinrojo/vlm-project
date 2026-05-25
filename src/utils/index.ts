@@ -28,6 +28,7 @@ export {
 } from './coordinates'
 export { getDetectionImageBaseUrl, getDetectionImageUrl } from './images'
 export { getUploadCoordinates } from './geolocation'
+export { extractGpsFromImage } from './imageExif'
 export {
   boundsToMapArea,
   filterByConfidence,

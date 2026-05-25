@@ -2,6 +2,7 @@
 import { computed, ref } from "vue";
 import {
   AlertCircle,
+  ImageIcon,
   ImagePlus,
   Loader2,
   Map,
@@ -22,7 +23,12 @@ import {
   MAX_IMAGE_SIZE_BYTES,
 } from "@/constants/upload";
 import type { DetectionCoordinates } from "@/types";
-import { formatCoordinates, formatFileSize, getUploadCoordinates } from "@/utils";
+import {
+  extractGpsFromImage,
+  formatCoordinates,
+  formatFileSize,
+  getUploadCoordinates,
+} from "@/utils";
 
 const props = withDefaults(
   defineProps<{
@@ -44,7 +50,8 @@ const emit = defineEmits<{
   clear: [];
 }>();
 
-type LocationMode = "gps" | "map" | null;
+type LocationMode = "exif" | "gps" | "map" | null;
+type ExifStatus = "idle" | "reading" | "found" | "not_found";
 
 const selectedFile = ref<File | null>(null);
 const previewUrl = ref<string | null>(null);
@@ -55,6 +62,8 @@ const coordinates = ref<DetectionCoordinates | null>(null);
 const locationMode = ref<LocationMode>(null);
 const locationError = ref<string | null>(null);
 const isFetchingGps = ref(false);
+const isReadingExif = ref(false);
+const exifStatus = ref<ExifStatus>("idle");
 
 const accept = ACCEPTED_IMAGE_ACCEPT;
 
@@ -69,14 +78,32 @@ const coordinatesLabel = computed(() => {
 });
 
 const canSubmit = computed(
-  () => Boolean(selectedFile.value && coordinates.value) && !props.loading,
+  () =>
+    Boolean(selectedFile.value && coordinates.value) &&
+    !props.loading &&
+    !isReadingExif.value,
 );
+
+const locationSourceHint = computed(() => {
+  if (exifStatus.value === "reading") {
+    return "Reading GPS from image metadata…";
+  }
+  if (locationMode.value === "exif" && coordinates.value) {
+    return "Location from photo EXIF metadata.";
+  }
+  if (exifStatus.value === "not_found" && selectedFile.value) {
+    return "No GPS in this image — use device location or pick on the map.";
+  }
+  return null;
+});
 
 function resetLocation() {
   coordinates.value = null;
   locationMode.value = null;
   locationError.value = null;
   isFetchingGps.value = false;
+  isReadingExif.value = false;
+  exifStatus.value = "idle";
 }
 
 function validateFile(file: File): string | null {
@@ -89,6 +116,34 @@ function validateFile(file: File): string | null {
   return null;
 }
 
+async function applyExifCoordinates(file: File) {
+  isReadingExif.value = true;
+  exifStatus.value = "reading";
+  locationError.value = null;
+
+  try {
+    const fromExif = await extractGpsFromImage(file);
+    if (fromExif) {
+      coordinates.value = fromExif;
+      locationMode.value = "exif";
+      exifStatus.value = "found";
+      return;
+    }
+    exifStatus.value = "not_found";
+  } finally {
+    isReadingExif.value = false;
+  }
+}
+
+async function usePhotoLocation() {
+  if (!selectedFile.value) return;
+  await applyExifCoordinates(selectedFile.value);
+  if (exifStatus.value === "not_found") {
+    locationError.value =
+      "This image has no GPS metadata. Use current location or pick on the map.";
+  }
+}
+
 function setFile(file: File) {
   const err = validateFile(file);
   if (err) {
@@ -97,8 +152,10 @@ function setFile(file: File) {
   }
   validationError.value = null;
   if (previewUrl.value) URL.revokeObjectURL(previewUrl.value);
+  resetLocation();
   selectedFile.value = file;
   previewUrl.value = URL.createObjectURL(file);
+  void applyExifCoordinates(file);
 }
 
 function handleFiles(files: FileList | null) {
@@ -129,6 +186,7 @@ function clearSelection() {
 
 async function useCurrentLocation() {
   locationMode.value = "gps";
+  exifStatus.value = "idle";
   locationError.value = null;
   isFetchingGps.value = true;
 
@@ -149,6 +207,7 @@ async function useCurrentLocation() {
 function useMapPicker() {
   locationMode.value = "map";
   locationError.value = null;
+  exifStatus.value = "idle";
 }
 
 function submitUpload() {
@@ -194,6 +253,9 @@ function submitUpload() {
               JPEG, JPG, or PNG · max
               {{ formatFileSize(MAX_IMAGE_SIZE_BYTES) }}
             </p>
+            <p class="mt-1 text-xs text-muted-foreground">
+              GPS from photo metadata is used automatically when available.
+            </p>
           </div>
           <input
             type="file"
@@ -236,11 +298,42 @@ function submitUpload() {
         <div>
           <p class="text-sm font-medium text-foreground">Location</p>
           <p class="mt-0.5 text-xs text-muted-foreground">
-            Choose how to set lat/lon sent with the upload.
+            GPS is read from the photo when present; otherwise choose a source below.
           </p>
         </div>
 
-        <div class="flex flex-col gap-2 sm:flex-row">
+        <p
+          v-if="locationSourceHint"
+          class="text-xs"
+          :class="
+            locationMode === 'exif' && coordinates
+              ? 'text-emerald-700 dark:text-emerald-400'
+              : 'text-muted-foreground'
+          "
+        >
+          <Loader2
+            v-if="isReadingExif"
+            class="mr-1 inline h-3 w-3 animate-spin"
+          />
+          {{ locationSourceHint }}
+        </p>
+
+        <div class="grid gap-2 sm:grid-cols-3">
+          <Button
+            type="button"
+            variant="outline"
+            class="flex-1"
+            :class="locationMode === 'exif' ? 'border-primary bg-primary/5' : ''"
+            :disabled="loading || !selectedFile || isReadingExif"
+            @click="usePhotoLocation"
+          >
+            <Loader2
+              v-if="isReadingExif"
+              class="h-4 w-4 animate-spin"
+            />
+            <ImageIcon v-else class="h-4 w-4" />
+            From photo
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -332,7 +425,11 @@ function submitUpload() {
         v-if="selectedFile && !coordinates && !loading"
         class="text-center text-xs text-muted-foreground"
       >
-        Select a location before analyzing.
+        {{
+          isReadingExif
+            ? "Reading GPS from image…"
+            : "Select a location before analyzing."
+        }}
       </p>
     </CardContent>
   </Card>
