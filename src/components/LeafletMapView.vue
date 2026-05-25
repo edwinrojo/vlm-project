@@ -21,6 +21,7 @@ import {
   formatCreatedAt,
   formatRecordCoordinates,
   formatRecordRecommendation,
+  getDetectionImageUrl,
   getRecordDisplayLabel,
   riskLevelBadgeVariant,
   riskLevelColor,
@@ -89,6 +90,38 @@ function createMarkerIcon(riskLevel: string) {
   })
 }
 
+function buildMarkerPopupHtml(record: AnalyticsRecord): string {
+  const imageUrl = getDetectionImageUrl(record.file_name)
+  const imageHtml = imageUrl
+    ? `<img
+        src="${escapeHtml(imageUrl)}"
+        alt="${escapeHtml(record.file_name || 'Road damage')}"
+        loading="lazy"
+        class="map-popup-image"
+        style="display:block;width:100%;max-height:180px;margin:0 0 8px;border-radius:6px;object-fit:cover;background:#f1f5f9"
+        onerror="this.style.display='none'"
+      />`
+    : ''
+
+  const recommendation = formatRecordRecommendation(record)
+  const recommendationHtml =
+    recommendation && recommendation !== '—'
+      ? `<p style="margin:8px 0 0;font-size:12px;line-height:1.4">${escapeHtml(recommendation)}</p>`
+      : ''
+
+  return `
+    <div class="map-popup-content" style="min-width:220px;max-width:300px">
+      ${imageHtml}
+      <strong>${escapeHtml(getRecordDisplayLabel(record))}</strong><br/>
+      <span style="font-size:12px;color:#64748b">${escapeHtml(formatRecordCoordinates(record))}</span><br/>
+      ${escapeHtml(record.damage_classification)}<br/>
+      <span style="font-size:12px">Risk: ${escapeHtml(record.assessment_risk_level || '—')} · ${formatConfidence(record.confidence_score)}</span><br/>
+      <span style="color:#64748b;font-size:11px">${escapeHtml(formatCreatedAt(record.created_at))}</span>
+      ${recommendationHtml}
+    </div>
+  `
+}
+
 function renderMarkers() {
   if (!map || !markersLayer) return
 
@@ -100,25 +133,10 @@ function renderMarkers() {
     const latLng: L.LatLngTuple = [record.latitude, record.longitude]
     bounds.push(latLng)
 
-    const recommendation = formatRecordRecommendation(record)
-    const recommendationHtml =
-      recommendation && recommendation !== '—'
-        ? `<p style="margin:8px 0 0;font-size:12px;line-height:1.4">${escapeHtml(recommendation)}</p>`
-        : ''
-
     L.marker(latLng, {
       icon: createMarkerIcon(primaryRiskLevel(record.risk_levels)),
     })
-      .bindPopup(`
-        <div style="min-width:200px;max-width:280px">
-          <strong>${escapeHtml(getRecordDisplayLabel(record))}</strong><br/>
-          <span style="font-size:12px;color:#64748b">${escapeHtml(formatRecordCoordinates(record))}</span><br/>
-          ${escapeHtml(record.damage_classification)}<br/>
-          <span style="font-size:12px">Risk: ${escapeHtml(record.assessment_risk_level || '—')} · ${formatConfidence(record.confidence_score)}</span><br/>
-          <span style="color:#64748b;font-size:11px">${escapeHtml(formatCreatedAt(record.created_at))}</span>
-          ${recommendationHtml}
-        </div>
-      `)
+      .bindPopup(buildMarkerPopupHtml(record), { maxWidth: 320 })
       .addTo(markersLayer)
   }
 
@@ -347,5 +365,9 @@ defineExpose({ invalidateSize: () => map?.invalidateSize() })
 :deep(.damage-marker) {
   background: transparent !important;
   border: none !important;
+}
+
+:deep(.map-popup-image) {
+  max-width: none !important;
 }
 </style>
