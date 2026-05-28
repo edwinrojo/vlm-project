@@ -34,6 +34,13 @@ function readStringArray(value: unknown): string[] {
   return value.filter((item): item is string => typeof item === 'string')
 }
 
+function readOptionalString(value: unknown): string {
+  if (value == null) return ''
+  const text = String(value).trim()
+  if (text === 'null' || text === 'undefined') return ''
+  return text
+}
+
 function isRoadReportPayload(raw: Record<string, unknown>): boolean {
   return (
     typeof raw.damage_classification === 'string' ||
@@ -74,22 +81,23 @@ export function mapRoadReportToAnalyticsRecord(
     damage_classifications: damageClassifications,
     damage_classification:
       formatJoinedList(damageClassifications) ||
-      String(row.damage_classification ?? 'Unknown'),
-    damage_dimensions_estimate: String(row.damage_dimensions_estimate ?? ''),
+      readOptionalString(row.damage_classification) ||
+      'Unknown',
+    damage_dimensions_estimate: readOptionalString(row.damage_dimensions_estimate),
     damage_technical_terms: readStringArray(row.damage_technical_terms),
     risk_levels: riskLevels,
     assessment_risk_level:
-      formatJoinedList(riskLevels) || String(row.assessment_risk_level ?? ''),
+      formatJoinedList(riskLevels) || readOptionalString(row.assessment_risk_level),
     assessment_vru_hazard: Boolean(row.assessment_vru_hazard),
-    assessment_hazard_analysis: String(row.assessment_hazard_analysis ?? ''),
-    recommendation_action: String(row.recommendation_action ?? ''),
+    assessment_hazard_analysis: readOptionalString(row.assessment_hazard_analysis),
+    recommendation_action: readOptionalString(row.recommendation_action),
     recommendation_urgency_levels: urgencyLevels,
     recommendation_urgency:
-      formatJoinedList(urgencyLevels) || String(row.recommendation_urgency ?? ''),
-    recommendation_disclaimer: String(row.recommendation_disclaimer ?? ''),
+      formatJoinedList(urgencyLevels) || readOptionalString(row.recommendation_urgency),
+    recommendation_disclaimer: readOptionalString(row.recommendation_disclaimer),
     confidence_score: normalizeConfidence(Number(row.confidence_score ?? 0)),
-    file_name: String(row.file_name ?? ''),
-    created_at: String(row.created_at ?? ''),
+    file_name: readOptionalString(row.file_name),
+    created_at: readOptionalString(row.created_at),
     source_latitude: coords.source_latitude,
     source_longitude: coords.source_longitude,
     coordinate_status: coords.status,
@@ -145,7 +153,17 @@ function readSuggestedRecommendation(raw: Record<string, unknown>): string {
 }
 
 function isRoadCheckResponse(raw: Record<string, unknown>): boolean {
-  return raw.damage_profile != null && typeof raw.damage_profile === 'object'
+  return (
+    raw.confidence_score != null ||
+    raw.error != null ||
+    raw.damage_profile != null ||
+    raw.assessment != null ||
+    raw.recommendation != null
+  )
+}
+
+function isRoadCheckOffTopicPayload(raw: Record<string, unknown>): boolean {
+  return normalizeConfidence(Number(raw.confidence_score ?? 1)) === 0
 }
 
 function readNested(
@@ -177,7 +195,7 @@ function buildOffTopicDetectionResult(
     recommendation_action: '',
     recommendation_urgency: '',
     recommendation_disclaimer: '',
-    file_name: String(raw.fileName ?? raw.file_name ?? ''),
+    file_name: readOptionalString(raw.fileName ?? raw.file_name),
     ...(coords
       ? { latitude: coords.latitude, longitude: coords.longitude }
       : {}),
@@ -187,8 +205,7 @@ function buildOffTopicDetectionResult(
 export function normalizeRoadCheckResponse(
   raw: Record<string, unknown>,
 ): DetectionResult {
-  const confidence = normalizeConfidence(Number(raw.confidence_score ?? 0))
-  if (confidence === 0) {
+  if (isRoadCheckOffTopicPayload(raw)) {
     return buildOffTopicDetectionResult(raw)
   }
 
@@ -196,8 +213,8 @@ export function normalizeRoadCheckResponse(
   const assessment = readNested(raw, 'assessment')
   const recommendation = readNested(raw, 'recommendation')
 
-  const classification = String(profile.classification ?? '').trim()
-  const riskLevel = String(assessment.risk_level ?? '').trim()
+  const classification = readOptionalString(profile.classification)
+  const riskLevel = readOptionalString(assessment.risk_level)
   const terms = readStringArray(profile.technical_terms)
 
   const damage_detected =
@@ -205,31 +222,34 @@ export function normalizeRoadCheckResponse(
     !/no damage|not applicable|none detected|unrelated/i.test(classification)
 
   const urgencyLevels = parseRiskOrUrgencyLevels(recommendation.urgency)
+  const recommendationAction = readOptionalString(recommendation.action)
+  const recommendationDisclaimer = readOptionalString(recommendation.disclaimer)
   const recommendationText =
     [
-      recommendation.action,
+      recommendationAction,
       urgencyLevels.length > 0 ? `Urgency: ${formatJoinedList(urgencyLevels)}` : null,
     ]
-      .filter((part) => typeof part === 'string' && part.trim().length > 0)
-      .join('. ') || String(recommendation.disclaimer ?? '')
+      .filter((part) => part != null && part.length > 0)
+      .join('. ') || recommendationDisclaimer
 
   const coords = parseApiCoordinates(raw)
 
   return {
     damage_detected,
     damage_type: classification || 'Unknown',
-    damage_dimensions_estimate: String(profile.dimensions_estimate ?? ''),
+    damage_dimensions_estimate: readOptionalString(profile.dimensions_estimate),
     damage_technical_terms: terms,
     severity: mapRiskLevelToSeverity(riskLevel || 'Medium'),
     assessment_risk_level: riskLevel,
     assessment_vru_hazard: Boolean(assessment.vru_hazard),
-    assessment_hazard_analysis: String(assessment.hazard_analysis ?? ''),
-    confidence,
+    assessment_hazard_analysis: readOptionalString(assessment.hazard_analysis),
+    confidence: normalizeConfidence(Number(raw.confidence_score ?? 0)),
     recommendation: recommendationText,
-    recommendation_action: String(recommendation.action ?? ''),
-    recommendation_urgency: formatJoinedList(urgencyLevels) || String(recommendation.urgency ?? ''),
-    recommendation_disclaimer: String(recommendation.disclaimer ?? ''),
-    file_name: String(raw.fileName ?? raw.file_name ?? ''),
+    recommendation_action: recommendationAction,
+    recommendation_urgency:
+      formatJoinedList(urgencyLevels) || readOptionalString(recommendation.urgency),
+    recommendation_disclaimer: recommendationDisclaimer,
+    file_name: readOptionalString(raw.fileName ?? raw.file_name),
     ...(coords
       ? { latitude: coords.latitude, longitude: coords.longitude }
       : {}),

@@ -23,28 +23,29 @@ export interface DetectionResult {
   longitude?: number
 }
 
-/** POST /road-check response body */
+/** Nested objects may be null when the model returns off-topic (confidence_score 0). */
 export interface RoadCheckApiResponse {
-  damage_profile: {
-    classification: string
-    dimensions_estimate: string
-    technical_terms: string[]
-  }
-  assessment: {
-    risk_level: string
-    vru_hazard: boolean
-    hazard_analysis: string
-  }
+  error?: string | null
   confidence_score: number
-  recommendation: {
-    action: string
-    urgency: string
-    disclaimer: string
-  }
-  fileName?: string
-  file_name?: string
-  latitude?: number
-  longitude?: number
+  damage_profile?: {
+    classification?: string | null
+    dimensions_estimate?: string | null
+    technical_terms?: string[] | null
+  } | null
+  assessment?: {
+    risk_level?: string | null
+    vru_hazard?: boolean | null
+    hazard_analysis?: string | null
+  } | null
+  recommendation?: {
+    action?: string | null
+    urgency?: string | null
+    disclaimer?: string | null
+  } | null
+  fileName?: string | null
+  file_name?: string | null
+  latitude?: number | null
+  longitude?: number | null
 }
 
 export interface UploadProgress {

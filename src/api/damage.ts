@@ -41,7 +41,20 @@ export async function detectRoadDamage(
   )
 
   options?.onProgress?.(100, 'analyzing')
-  return normalizeDetectionResult(data as unknown as Record<string, unknown>)
+  const result = normalizeDetectionResult(data as unknown as Record<string, unknown>)
+
+  if (
+    options?.coordinates &&
+    (result.latitude == null || result.longitude == null)
+  ) {
+    return {
+      ...result,
+      latitude: options.coordinates.lat,
+      longitude: options.coordinates.lon,
+    }
+  }
+
+  return result
 }
 
 async function mockDetect(
