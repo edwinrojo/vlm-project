@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { MapAreaBounds } from '@/types/filters'
+import { DAMAGE_CLASSIFICATIONS } from '@/constants/roadReport'
 import { ALL_RISK_LEVELS } from '@/types/filters'
 
 export const useDashboardFiltersStore = defineStore('dashboardFilters', () => {
@@ -9,6 +10,7 @@ export const useDashboardFiltersStore = defineStore('dashboardFilters', () => {
   const dateTo = ref('')
 
   const selectedRiskLevels = ref<string[]>([])
+  const selectedClassifications = ref<string[]>([])
   const mapSelectedRiskLevels = ref<string[]>([])
   const confidenceMin = ref(0)
   const confidenceMax = ref(1)
@@ -26,6 +28,7 @@ export const useDashboardFiltersStore = defineStore('dashboardFilters', () => {
   const hasActiveTableFilters = computed(
     () =>
       selectedRiskLevels.value.length > 0 ||
+      selectedClassifications.value.length > 0 ||
       confidenceMin.value > 0 ||
       confidenceMax.value < 1,
   )
@@ -36,6 +39,20 @@ export const useDashboardFiltersStore = defineStore('dashboardFilters', () => {
       selectedRiskLevels.value = selectedRiskLevels.value.filter((l) => l !== level)
     } else {
       selectedRiskLevels.value = [...selectedRiskLevels.value, level]
+    }
+  }
+
+  function toggleClassification(classification: string) {
+    const index = selectedClassifications.value.indexOf(classification)
+    if (index >= 0) {
+      selectedClassifications.value = selectedClassifications.value.filter(
+        (item) => item !== classification,
+      )
+    } else {
+      selectedClassifications.value = [
+        ...selectedClassifications.value,
+        classification,
+      ]
     }
   }
 
@@ -58,6 +75,7 @@ export const useDashboardFiltersStore = defineStore('dashboardFilters', () => {
 
   function resetTableFilters() {
     selectedRiskLevels.value = []
+    selectedClassifications.value = []
     confidenceMin.value = 0
     confidenceMax.value = 1
   }
@@ -85,6 +103,7 @@ export const useDashboardFiltersStore = defineStore('dashboardFilters', () => {
     dateFrom,
     dateTo,
     selectedRiskLevels,
+    selectedClassifications,
     mapSelectedRiskLevels,
     confidenceMin,
     confidenceMax,
@@ -93,7 +112,9 @@ export const useDashboardFiltersStore = defineStore('dashboardFilters', () => {
     hasActiveTableFilters,
     hasActiveMapFilters,
     allRiskLevels: ALL_RISK_LEVELS,
+    allClassifications: DAMAGE_CLASSIFICATIONS,
     toggleRiskLevel,
+    toggleClassification,
     toggleMapRiskLevel,
     setMapArea,
     clearMapArea,

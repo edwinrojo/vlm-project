@@ -30,6 +30,10 @@ const confidenceMaxPercent = computed({
 function isRiskLevelActive(level: string) {
   return filters.selectedRiskLevels.includes(level)
 }
+
+function isClassificationActive(classification: string) {
+  return filters.selectedClassifications.includes(classification)
+}
 </script>
 
 <template>
@@ -76,6 +80,31 @@ function isRiskLevelActive(level: string) {
       </div>
       <p class="text-xs text-muted-foreground">
         Click to toggle. None selected = all risk levels.
+      </p>
+    </div>
+
+    <div class="space-y-2">
+      <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Damage classification
+      </p>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="type in filters.allClassifications"
+          :key="type"
+          type="button"
+          class="rounded-full transition-opacity"
+          :class="
+            isClassificationActive(type)
+              ? 'ring-2 ring-primary ring-offset-1'
+              : 'opacity-70 hover:opacity-100'
+          "
+          @click="filters.toggleClassification(type)"
+        >
+          <Badge variant="outline">{{ type }}</Badge>
+        </button>
+      </div>
+      <p class="text-xs text-muted-foreground">
+        Click to toggle. Applies to table, charts, and map. None selected = all types.
       </p>
     </div>
 

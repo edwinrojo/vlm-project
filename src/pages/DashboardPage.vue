@@ -4,6 +4,7 @@ import { storeToRefs } from "pinia";
 import dayjs from "dayjs";
 import { AlertCircle, RefreshCw } from "lucide-vue-next";
 import { toast } from "vue-sonner";
+import DashboardSummaryBanner from "@/components/DashboardSummaryBanner.vue";
 import DashboardFilters from "@/components/DashboardFilters.vue";
 import DamageTable from "@/components/DamageTable.vue";
 import DashboardStats from "@/components/DashboardStats.vue";
@@ -25,7 +26,7 @@ const analyticsStore = useAnalyticsStore();
 const { records, isLoading, error, lastFetchedAt } =
   storeToRefs(analyticsStore);
 
-const { dashboardRecords, tableRecords, offTopicInViewCount } =
+const { dashboardRecords, tableRecords, dashboardSummary, offTopicInViewCount } =
   useFilteredAnalytics(records);
 
 const stats = computed(() =>
@@ -100,6 +101,11 @@ onMounted(() => loadData());
         <p class="mt-0.5 opacity-90">{{ error }}</p>
       </div>
     </div>
+
+    <DashboardSummaryBanner
+      :summary="dashboardSummary"
+      :loading="isLoading"
+    />
 
     <DashboardFilters
       :total-records="records.length"

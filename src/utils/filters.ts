@@ -1,4 +1,4 @@
-import { recordHasRiskLevel } from '@/constants/roadReport'
+import { recordHasDamageClassification, recordHasRiskLevel } from '@/constants/roadReport'
 import type { MapAreaBounds } from '@/types/filters'
 import type { AnalyticsRecord } from '@/types'
 import dayjs from 'dayjs'
@@ -33,6 +33,17 @@ export function filterByRiskLevel(
 
 /** @deprecated Use filterByRiskLevel */
 export const filterBySeverity = filterByRiskLevel
+
+/** Match if the record has any of the selected damage types. */
+export function filterByDamageClassification(
+  records: AnalyticsRecord[],
+  classifications: string[],
+): AnalyticsRecord[] {
+  if (classifications.length === 0) return records
+  return records.filter((record) =>
+    classifications.some((type) => recordHasDamageClassification(record, type)),
+  )
+}
 
 export function filterByConfidence(
   records: AnalyticsRecord[],

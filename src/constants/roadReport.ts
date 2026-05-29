@@ -122,3 +122,21 @@ export function recordHasRiskLevel(record: { risk_levels: string[] }, level: str
   const target = level.toLowerCase()
   return record.risk_levels.some((item) => item.toLowerCase() === target)
 }
+
+/** Match if the record includes a canonical damage type. */
+export function recordHasDamageClassification(
+  record: { damage_classifications: string[]; damage_classification: string },
+  classification: string,
+): boolean {
+  const target = classification.toLowerCase()
+
+  if (
+    record.damage_classifications.some((item) => item.toLowerCase() === target)
+  ) {
+    return true
+  }
+
+  return parseDamageClassifications(record.damage_classification).some(
+    (item) => item.toLowerCase() === target,
+  )
+}

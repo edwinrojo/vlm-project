@@ -1,10 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import L from "leaflet";
-import { Eraser, SquareDashedMousePointer } from "lucide-vue-next";
+import {
+  Eraser,
+  Flame,
+  Layers,
+  SquareDashedMousePointer,
+} from "lucide-vue-next";
+import "leaflet.markercluster";
+import "leaflet.heat";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { primaryRiskLevel } from "@/constants/roadReport";
+import { primaryRiskLevel, RISK_LEVELS } from "@/constants/roadReport";
 import {
   MAP_DEFAULT_CENTER,
   MAP_DEFAULT_ZOOM,
@@ -50,9 +57,21 @@ const mapContainer = ref<HTMLElement | null>(null);
 const mapError = ref<string | null>(null);
 const mapReady = ref(false);
 
+type MapViewMode = "cluster" | "heatmap";
+
+const mapViewMode = ref<MapViewMode>("cluster");
+
 let map: L.Map | null = null;
-let markersLayer: L.LayerGroup | null = null;
+let clusterLayer: L.MarkerClusterGroup | null = null;
+let heatLayer: L.HeatLayer | null = null;
 let resizeObserver: ResizeObserver | null = null;
+
+const HEAT_GRADIENT: Record<number, string> = {
+  0.25: "#10b981",
+  0.45: "#f59e0b",
+  0.7: "#ef4444",
+  1: "#b91c1c",
+};
 
 const areaSelection = useMapAreaSelection(
   () => map,
@@ -75,6 +94,49 @@ const hasNoValidMarkers = computed(
   () => !props.loading && displayedRecords.value.length === 0,
 );
 
+const markerRiskStats = computed(() => {
+  const counts = new Map<string, number>();
+  for (const level of RISK_LEVELS) counts.set(level, 0);
+
+  let unknownCount = 0;
+
+  for (const record of displayedRecords.value) {
+    const level = primaryRiskLevel(record.risk_levels);
+    if (counts.has(level)) {
+      counts.set(level, (counts.get(level) ?? 0) + 1);
+    } else {
+      unknownCount += 1;
+    }
+  }
+
+  const items: { level: string; count: number; color: string }[] =
+    RISK_LEVELS.map((level) => ({
+      level,
+      count: counts.get(level) ?? 0,
+      color: riskLevelColor(level),
+    }));
+
+  if (unknownCount > 0) {
+    items.push({
+      level: "Unknown",
+      count: unknownCount,
+      color: riskLevelColor("Unknown"),
+    });
+  }
+
+  return items;
+});
+
+const visibleMarkerStats = computed(() =>
+  markerRiskStats.value.filter((item) => item.count > 0),
+);
+
+const markerStatsSummary = computed(() =>
+  visibleMarkerStats.value
+    .map((item) => `${item.count} ${item.level}`)
+    .join(" · "),
+);
+
 function escapeHtml(text: string) {
   return text
     .replaceAll("&", "&amp;")
@@ -91,6 +153,75 @@ function createMarkerIcon(riskLevel: string) {
     iconSize: [14, 14],
     iconAnchor: [7, 7],
   });
+}
+
+function heatIntensity(record: AnalyticsRecord): number {
+  const level = primaryRiskLevel(record.risk_levels).toLowerCase();
+  if (level === "critical") return 1;
+  if (level === "high") return 0.85;
+  if (level === "medium") return 0.55;
+  if (level === "low") return 0.35;
+  return 0.45;
+}
+
+function createClusterLayer(): L.MarkerClusterGroup {
+  return L.markerClusterGroup({
+    maxClusterRadius: 52,
+    spiderfyOnMaxZoom: true,
+    showCoverageOnHover: false,
+    zoomToBoundsOnClick: true,
+    disableClusteringAtZoom: 17,
+    iconCreateFunction(cluster) {
+      const count = cluster.getChildCount();
+      const size = count < 10 ? 34 : count < 50 ? 40 : 46;
+      return L.divIcon({
+        html: `<div class="damage-cluster" style="width:${size}px;height:${size}px"><span>${count}</span></div>`,
+        className: "damage-cluster-wrap",
+        iconSize: L.point(size, size),
+      });
+    },
+  });
+}
+
+function removeHeatLayer() {
+  if (map && heatLayer) {
+    map.removeLayer(heatLayer);
+    heatLayer = null;
+  }
+}
+
+function removeClusterLayer() {
+  if (map && clusterLayer) {
+    map.removeLayer(clusterLayer);
+    clusterLayer = null;
+  }
+}
+
+function fitMapToDisplayedRecords() {
+  if (!map) return;
+
+  if (
+    mapViewMode.value === "cluster" &&
+    clusterLayer &&
+    clusterLayer.getLayers().length > 0
+  ) {
+    map.fitBounds(clusterLayer.getBounds(), { padding: [32, 32], maxZoom: 14 });
+    return;
+  }
+
+  const bounds: L.LatLngTuple[] = [];
+  for (const record of displayedRecords.value) {
+    if (record.latitude == null || record.longitude == null) continue;
+    bounds.push([record.latitude, record.longitude]);
+  }
+
+  if (bounds.length > 1) {
+    map.fitBounds(L.latLngBounds(bounds), { padding: [32, 32], maxZoom: 14 });
+  } else if (bounds.length === 1 && bounds[0]) {
+    map.setView(bounds[0], 14);
+  } else if (!filtersStore.mapAreaBounds) {
+    map.setView(MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM);
+  }
 }
 
 function buildMarkerPopupHtml(record: AnalyticsRecord): string {
@@ -134,31 +265,75 @@ function buildMarkerPopupHtml(record: AnalyticsRecord): string {
   `;
 }
 
-function renderMarkers() {
-  if (!map || !markersLayer) return;
+function renderClusterMarkers() {
+  if (!map) return;
 
-  markersLayer.clearLayers();
-  const bounds: L.LatLngTuple[] = [];
+  removeHeatLayer();
+  removeClusterLayer();
+
+  clusterLayer = createClusterLayer();
+  clusterLayer.addTo(map);
 
   for (const record of displayedRecords.value) {
     if (record.latitude == null || record.longitude == null) continue;
     const latLng: L.LatLngTuple = [record.latitude, record.longitude];
-    bounds.push(latLng);
 
     L.marker(latLng, {
       icon: createMarkerIcon(primaryRiskLevel(record.risk_levels)),
     })
       .bindPopup(buildMarkerPopupHtml(record), { maxWidth: 320 })
-      .addTo(markersLayer);
+      .addTo(clusterLayer);
   }
 
-  if (bounds.length > 1) {
-    map.fitBounds(L.latLngBounds(bounds), { padding: [32, 32], maxZoom: 14 });
-  } else if (bounds.length === 1 && bounds[0]) {
-    map.setView(bounds[0], 14);
-  } else if (!filtersStore.mapAreaBounds) {
-    map.setView(MAP_DEFAULT_CENTER, MAP_DEFAULT_ZOOM);
+  fitMapToDisplayedRecords();
+}
+
+function renderHeatmap() {
+  if (!map) return;
+
+  removeClusterLayer();
+  removeHeatLayer();
+
+  const points: [number, number, number][] = [];
+
+  for (const record of displayedRecords.value) {
+    if (record.latitude == null || record.longitude == null) continue;
+    points.push([
+      record.latitude,
+      record.longitude,
+      heatIntensity(record),
+    ]);
   }
+
+  if (points.length > 0) {
+    heatLayer = L.heatLayer(points, {
+      radius: 28,
+      blur: 20,
+      maxZoom: 16,
+      minOpacity: 0.35,
+      max: 1,
+      gradient: HEAT_GRADIENT,
+    });
+    heatLayer.addTo(map);
+  }
+
+  fitMapToDisplayedRecords();
+}
+
+function renderMarkers() {
+  if (!map) return;
+
+  if (mapViewMode.value === "heatmap") {
+    renderHeatmap();
+  } else {
+    renderClusterMarkers();
+  }
+}
+
+function setMapViewMode(mode: MapViewMode) {
+  if (mapViewMode.value === mode) return;
+  mapViewMode.value = mode;
+  if (map) renderMarkers();
 }
 
 function destroyMap() {
@@ -169,7 +344,8 @@ function destroyMap() {
     map.remove();
   }
   map = null;
-  markersLayer = null;
+  clusterLayer = null;
+  heatLayer = null;
   mapReady.value = false;
 }
 
@@ -191,7 +367,6 @@ function initMap() {
       maxZoom: 20,
     }).addTo(map);
 
-    markersLayer = L.layerGroup().addTo(map);
     areaSelection.bindMap(map);
 
     if (filtersStore.mapAreaBounds) {
@@ -232,6 +407,10 @@ onMounted(() => {
 });
 
 watch(displayedRecords, () => {
+  if (map) renderMarkers();
+});
+
+watch(mapViewMode, () => {
   if (map) renderMarkers();
 });
 
@@ -283,6 +462,45 @@ defineExpose({ invalidateSize: () => map?.invalidateSize() });
             >None selected = show all risk levels</span
           >
           <span class="sm:hidden">Tap badges to filter markers</span>
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <span
+          class="w-full text-xs font-medium uppercase tracking-wide text-muted-foreground sm:w-auto"
+        >
+          Map view
+        </span>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          class="h-8 gap-1.5 text-xs"
+          :class="{ 'ring-2 ring-primary': mapViewMode === 'cluster' }"
+          @click="setMapViewMode('cluster')"
+        >
+          <Layers class="h-3.5 w-3.5" />
+          Clusters
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          class="h-8 gap-1.5 text-xs"
+          :class="{ 'ring-2 ring-primary': mapViewMode === 'heatmap' }"
+          @click="setMapViewMode('heatmap')"
+        >
+          <Flame class="h-3.5 w-3.5" />
+          Heatmap
+        </Button>
+        <p class="w-full text-[11px] text-muted-foreground sm:text-xs">
+          <span v-if="mapViewMode === 'cluster'">
+            Group nearby markers; click a cluster to zoom or spiderfy.
+          </span>
+          <span v-else>
+            Density by risk (green low → red critical). Switch to clusters
+            for report popups.
+          </span>
         </p>
       </div>
 
@@ -379,6 +597,66 @@ defineExpose({ invalidateSize: () => map?.invalidateSize() });
           longitude on each report.
         </p>
       </div>
+
+      <div
+        v-if="mapReady && !mapError && !loading"
+        class="pointer-events-none absolute bottom-3 left-3 z-[500] flex max-w-[min(100%,20rem)] flex-col gap-2 sm:max-w-xs"
+      >
+        <div
+          class="pointer-events-auto rounded-lg border border-border bg-background/95 px-3 py-2.5 shadow-md backdrop-blur-sm"
+        >
+          <p
+            class="mb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+          >
+            Risk legend
+          </p>
+          <div class="flex flex-wrap gap-x-3 gap-y-1.5">
+            <button
+              v-for="level in RISK_LEVELS"
+              :key="level"
+              type="button"
+              class="inline-flex items-center gap-1.5 rounded-md px-0.5 py-0.5 text-xs transition-opacity hover:opacity-100"
+              :class="
+                filtersStore.mapSelectedRiskLevels.length > 0 &&
+                !isMapRiskLevelActive(level)
+                  ? 'opacity-45'
+                  : 'opacity-100'
+              "
+              :title="`Filter map to ${level}`"
+              @click="filtersStore.toggleMapRiskLevel(level)"
+            >
+              <span
+                class="h-2.5 w-2.5 shrink-0 rounded-full border border-white shadow-sm"
+                :style="{ backgroundColor: riskLevelColor(level) }"
+              />
+              <span class="font-medium text-foreground">{{ level }}</span>
+            </button>
+          </div>
+        </div>
+
+        <div
+          v-if="displayedRecords.length > 0"
+          class="pointer-events-none rounded-lg border border-border bg-background/95 px-3 py-2 shadow-md backdrop-blur-sm"
+        >
+          <p class="text-xs font-semibold text-foreground">
+            {{ displayedRecords.length }}
+            marker{{ displayedRecords.length === 1 ? "" : "s" }} on map
+          </p>
+          <p
+            v-if="markerStatsSummary"
+            class="mt-0.5 text-[11px] leading-relaxed text-muted-foreground"
+          >
+            {{ markerStatsSummary }}
+          </p>
+          <p
+            v-if="filtersStore.mapSelectedRiskLevels.length > 0"
+            class="mt-1 text-[10px] text-primary"
+          >
+            Filtered:
+            {{ filtersStore.mapSelectedRiskLevels.join(", ") }}
+          </p>
+        </div>
+      </div>
     </div>
   </div>
 </template>
@@ -396,5 +674,24 @@ defineExpose({ invalidateSize: () => map?.invalidateSize() });
 
 :deep(.map-popup-image) {
   max-width: none !important;
+}
+
+:deep(.damage-cluster-wrap) {
+  background: transparent !important;
+  border: none !important;
+}
+
+:deep(.damage-cluster) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: hsl(221 83% 53%);
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  border: 2px solid white;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 28%);
 }
 </style>
