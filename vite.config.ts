@@ -11,7 +11,9 @@ function vendorChunk(id: string): string | undefined {
   if (id.includes("apexcharts") || id.includes("vue3-apexcharts")) {
     return "vendor-charts";
   }
-  if (id.includes("leaflet")) {
+  // Only the core `leaflet` package — plugins (markercluster, heat) expect
+  // global `L` and must not run when unrelated routes import `leaflet` alone.
+  if (/node_modules\/leaflet\//.test(id)) {
     return "vendor-leaflet";
   }
   if (id.includes("reka-ui") || id.includes("@vueuse")) {

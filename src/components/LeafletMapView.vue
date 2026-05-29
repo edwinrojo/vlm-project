@@ -7,6 +7,9 @@ import {
   Layers,
   SquareDashedMousePointer,
 } from "lucide-vue-next";
+
+// Legacy Leaflet plugins attach to global `L` (see vite manualChunks for leaflet).
+;(globalThis as typeof globalThis & { L: typeof L }).L = L;
 import "leaflet.markercluster";
 import "leaflet.heat";
 import { Badge } from "@/components/ui/badge";
